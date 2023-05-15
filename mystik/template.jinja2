@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Findings</title>
+
+    <!-- This script stores the search results (and its filtered list). -->
+    <script>
+        // These variables are populated during compilation of the results.
+        (async () => {
+            'use strict';
+
+            window.resultPageSize = 20;
+            window.reportMetadata = {{ report_metadata }};
+            window.reportResults = {{ report_results }};
+            window.filteredResults = [];
+
+            window.sortedResults = window.reportResults.sort((a, b) => {
+                if (a.totalWeight < b.totalWeight) {
+                    return 1;
+                } else if (a.totalWeight === b.totalWeight) {
+                    if (a.uuid < b.uuid) {
+                        return 1;
+                    } else {
+                        return -1;
+                    }
+                } else if (a.totalWeight > b.totalWeight) {
+                    return -1;
+                }
+
+
+                (a.totalWeight < b.totalWeight) ? 1 : -1
+            });
+        })();
+    </script>
+
+    <!-- This script provides basic utilities that are utilized throughout the application. -->
+    <script>
+        // These variables are populated during compilation of the results.
+        (async () => {
+            'use strict';
+
+            async function getURLParameter(key, defaultValue = undefined) {
+                const url = new URL(window.location.href);
+                return url.searchParams.get(key) || defaultValue;
+            }
+
+            async function setURLParameter(key, value) {
+                const url = new URL(window.location);
+                url.searchParams.set(key, value);
+                window.history.pushState({}, '', url);
+            }
+
+
+            async function createPathEntries(parent, path) {
+                const pathEntryTemplate = document.querySelector('[data-id="path-entry--template"]');
+
+                for (let index = 0; index < path.length; index++) {
+                    let entry = pathEntryTemplate.content.firstElementChild.cloneNode(true);
+
+                    if (index === 0)
+                        entry.querySelector('i').classList.add('hidden');
+
+                    entry.querySelector('span').textContent = path[index];
+                    parent.appendChild(entry);
+                }
+            }
+
+            window.utilities = {
+                getURLParameter,
+                setURLParameter,
+                createPathEntries
+            };
+        })();
+    </script>
+
+
+    <!-- This script provides functionality for the page tabs. -->
+    <script>
+        (async () => {
+            'use strict';
+
+            async function getPageTabs() {
+                return pageTabs = document.querySelector('[data-id="page-tabs"]').children;
+            }
+
+            async function setPagesInactive() {
+                const pages = document.querySelector('[data-id="pages"]').children;
+
+                for (const page of Object.values(pages)) {
+                    page.classList.add('hidden');
+                }
+            }
+
+            async function setPageActive(page) {
+                await setPagesInactive();
+                page.classList.remove('hidden');
+            }
+
+            async function setPageTabsInactive() {
+                const pageTabs = await getPageTabs();
+
+                for (const tab of Object.values(pageTabs)) {
+                    tab.classList.remove('page-tab--active');
+                    tab.classList.add('page-tab--inactive');
+                }
+            }
+
+            async function setPageTabActive(pageTab) {
+                await setPageTabsInactive();
+                pageTab.classList.remove('page-tab--inactive');
+                pageTab.classList.add('page-tab--active');
+            }
+
+            async function setup() {
+                const pageTabs = await getPageTabs();
+
+                for (const tab of Object.values(pageTabs)) {
+                    tab.addEventListener('click', async (event) => {
+                        await setPageTabActive(tab);
+                        await setPageActive(document.querySelector(`[data-id="${tab.getAttribute('data-page')}"]`));
+                    });
+                }
+            }
+
+            window.pageTabs = {
+                setup
+            };
+        })();
+    </script>
+
+    <!-- This script provides functionality for the risk tabs. -->
+    <script>
+        (async () => {
+            'use strict';
+
+            async function setupRiskTabCounters(riskResultsByCategory) {
+                for (const category in riskResultsByCategory) {
+                    const riskTabCounter = document.querySelector(`[data-id="risk-tab-counter--${category}"]`);
+                    riskTabCounter.textContent = riskResultsByCategory[category].length;
+                }
+            }
+
+            async function setRiskTabsInactive(riskTabs) {
+                for (const riskTab of Object.values(riskTabs)) {
+                    riskTab.classList.remove('risk-tab--active');
+                    riskTab.classList.add('risk-tab--inactive');
+
+                    // We also set the counter to inactive (assuming there is one).
+                    const counter = riskTab.querySelector('span');
+
+                    if (counter) {
+                        counter.classList.remove('risk-tab-counter--active');
+                        counter.classList.add('risk-tab-counter--inactive');
+                    }
+                }
+            }
+
+            async function setRiskTabActive(riskTab) {
+                riskTab.classList.remove('risk-tab--inactive');
+                riskTab.classList.add('risk-tab--active');
+
+                // We also set the counter to inactive (assuming there is one).
+                const counter = riskTab.querySelector('span');
+
+                if (counter) {
+                    counter.classList.remove('risk-tab-counter--inactive');
+                    counter.classList.add('risk-tab-counter--active');
+                }
+            }
+
+            async function setup() {
+                const riskResultsByCategory = {
+                    low: [],
+                    moderate: [],
+                    high: []
+                };
+
+                for (const result of sortedResults) {
+                    if (result.totalWeight < 1.35) {
+                        riskResultsByCategory.low.push(result);
+                    } else if (result.totalWeight < 1.65) {
+                        riskResultsByCategory.moderate.push(result);
+                    } else {
+                        riskResultsByCategory.high.push(result);
+                    }
+                }
+
+                // Once we have our counts, we set the counts for each tab.
+                await setupRiskTabCounters(riskResultsByCategory);
+
+                // Then, we assign these arrays to the window (this keeps us from needing
+                // to sort them every time).
+                window.riskResultsByCategory = riskResultsByCategory;
+
+                // Next, we set up a table of all the buttons.
+                const riskTabs = {
+                    all: document.querySelector('[data-id="risk-tab--all"]')
+                };
+
+                for (const category in riskResultsByCategory) {
+                    riskTabs[category] = document.querySelector(`[data-id="risk-tab--${category}"]`);
+                }
+
+                riskTabs.all.addEventListener('click', async (event) => {
+                    setRiskTabsInactive(riskTabs);
+                    setRiskTabActive(riskTabs.all);
+                    window.selectedCategory = sortedResults;
+                    await utilities.setURLParameter('riskCategory', 'all');
+                    let term = await utilities.getURLParameter('searchBoxTerm', '');
+                    searchBox.filterResults(term);
+                    setupResultButtons();
+                });
+
+                riskTabs.high.addEventListener('click', async (event) => {
+                    setRiskTabsInactive(riskTabs);
+                    setRiskTabActive(riskTabs.high);
+                    window.selectedCategory = riskResultsByCategory.high;
+                    await utilities.setURLParameter('riskCategory', 'high');
+                    let term = await utilities.getURLParameter('searchBoxTerm', '');
+                    searchBox.filterResults(term);
+                    setupResultButtons();
+                });
+
+                riskTabs.moderate.addEventListener('click', async (event) => {
+                    setRiskTabsInactive(riskTabs);
+                    setRiskTabActive(riskTabs.moderate);
+                    window.selectedCategory = riskResultsByCategory.moderate;
+                    await utilities.setURLParameter('riskCategory', 'moderate');
+                    let term = await utilities.getURLParameter('searchBoxTerm', '');
+                    searchBox.filterResults(term);
+                    setupResultButtons();
+                });
+
+                riskTabs.low.addEventListener('click', async (event) => {
+                    setRiskTabsInactive(riskTabs);
+                    setRiskTabActive(riskTabs.low);
+                    window.selectedCategory = riskResultsByCategory.low;
+                    await utilities.setURLParameter('riskCategory', 'low');
+                    let term = await utilities.getURLParameter('searchBoxTerm', '');
+                    searchBox.filterResults(term);
+                    setupResultButtons();
+                });
+
+                let category = await utilities.getURLParameter('riskCategory', '');
+
+                if (['high', 'moderate', 'low'].includes(category)) {
+                    window.selectedCategory = riskResultsByCategory[category];
+                } else {
+                    window.selectedCategory = sortedResults;
+                }
+            }
+
+            window.riskCategories = {
+                setup
+            };
+        })();
+    </script>
+
+
+    <!-- This script provides functionality for the search box. -->
+    <script>
+        (async () => {
+            'use strict';
+
+            async function filterResults(term) {
+                // We start by preparing the search term.
+                term = term.toUpperCase().trim();
+
+                // If the search term is just an empty string, we reset the
+                // search entirely.
+                if (term === '') {
+                    console.log('Reset the filter to all search results.');
+
+                    window.filteredResults = window.selectedCategory;
+                    return;
+                }
+
+                let filteredResults = [];
+
+                let terms = term.split(' ');
+                let positiveTerms = [];
+                let negativeTerms = [];
+
+                for (let termSegment of terms) {
+                    if (termSegment.startsWith('!')) {
+                        negativeTerms.push(termSegment.slice(1));
+                    } else {
+                        positiveTerms.push(termSegment);
+                    }
+                }
+
+                for (let result of window.selectedCategory) {
+                    let shouldInclude = (positiveTerms.length == 0);
+
+                    for (let positiveTerm of positiveTerms) {
+                        shouldInclude = (
+                            result.secretType.toUpperCase().includes(positiveTerm) ||
+                            result.secret.toUpperCase().includes(positiveTerm) ||
+                            result.filePath.at(-1).toUpperCase().includes(positiveTerm)
+                        );
+
+                        if (shouldInclude) {
+                            break;
+                        }
+                    }
+
+                    let shouldExclude = false;
+
+                    for (let negativeTerm of negativeTerms) {
+                        shouldExclude = (
+                            result.secretType.toUpperCase().includes(negativeTerm) ||
+                            result.secret.toUpperCase().includes(negativeTerm) ||
+                            result.filePath.at(-1).toUpperCase().includes(negativeTerm)
+                        );
+
+                        if (shouldExclude) {
+                            break;
+                        }
+                    }
+
+                    if (shouldInclude && !shouldExclude) {
+                        filteredResults.push(result);
+                    }
+                }
+
+                console.log(`Filtered to a total of ${filteredResults.length} results.`);
+
+                window.filteredResults = filteredResults;
+            }
+
+            async function setup() {
+                // We start by setting up any existing filters on the data.
+                let term = await utilities.getURLParameter('searchBoxTerm', '');
+                await filterResults(term);
+
+                const searchBox = document.querySelector('[data-id="search-box"]');
+                searchBox.value = term;
+
+                const searchForm = document.querySelector('[data-id="search-form"]');
+
+                searchForm.addEventListener('submit', async (event) => {
+                    event.preventDefault();
+                    term = searchBox.value;
+                    await filterResults(term);
+                    await utilities.setURLParameter('searchBoxTerm', term);
+                    await utilities.setURLParameter('resultPage', 1);
+                    setupResultButtons(); // TODO: Fix
+                });
+
+                document.addEventListener('popstate', async (event) => {
+                    term = await utilities.getURLParameter('searchBoxTerm', '');
+                    await filterResults(term);
+                    searchBox.value = term;
+                    setupResultButtons(); // TODO: Fix
+                });
+            }
+
+            window.searchBox = {
+                setup,
+                filterResults
+            };
+        })();
+    </script>
+
+
+    <!-- This script sets up our report's headers. -->
+    <script>
+        (async () => {
+            'use strict';
+
+            async function setup() {
+                const pathEntriesHeader = document.querySelector('[data-id="target-path-entries--header"]');
+                utilities.createPathEntries(pathEntriesHeader, reportMetadata['targetPath']);
+
+                const pathHeader = document.querySelector('[data-id="target-path--header"]');
+                pathHeader.textContent = reportMetadata['reportName'];
+
+                const secretCountHeader = document.querySelector('[data-id="secret-count--header"]');
+                secretCountHeader.textContent = `Found ${reportMetadata['secretCount']} secrets`;
+
+                const fileCoverageHeader = document.querySelector('[data-id="file-coverage--header"]');
+                fileCoverageHeader.textContent = `Covered ${reportMetadata['fileCoverage']} files`;
+
+                const searchDurationHeader = document.querySelector('[data-id="search-duration--header"]');
+                searchDurationHeader.textContent = `Took ${reportMetadata['searchDuration']} seconds`;
+
+                const timestampHeader = document.querySelector('[data-id="timestamp--header"]');
+                timestampHeader.textContent = `Completed ${reportMetadata['timestamp']}`;
+            }
+
+            window.reportHeaders = {
+                setup
+            };
+        })();
+    </script>
+
+
+    <script>
+        function getURLParameter(key, defaultValue = undefined) {
+            let url = new URL(window.location.href);
+            return url.searchParams.get(key) || defaultValue;
+        }
+
+        function setURLParameter(key, value) {
+            let url = new URL(window.location);
+            url.searchParams.set(key, value);
+            window.history.pushState({}, '', url);
+        }
+
+        function addResultRow(result) {
+            const table = document.querySelector('[data-id="secrets"]');
+            const row = document.querySelector('[data-id="secret-row--template"]').content.firstElementChild.cloneNode(true);
+
+            // We populate the attack row according to the provided data.
+            row.querySelector('[data-id="secret-name"]').textContent = `${result.secretType} found on line ${result.matchLine} of ${result.filePath.at(-1)}`;
+            row.querySelector('[data-id="secret"]').textContent = result.secret;
+
+            const rowIcon = row.querySelector('[data-id="secret-icon"]');
+
+            if (result.secretType === 'Base64') {
+                rowIcon.classList.remove('fa-key');
+                rowIcon.classList.add('fa-cube');
+            } else if (result.secretType === 'UUID') {
+                rowIcon.classList.remove('fa-key');
+                rowIcon.classList.add('fa-id-badge');
+            }
+
+            const starHolder = row.querySelector('[data-id="quality-of-detection"]');
+
+            const secretPath = row.querySelector('[data-id="secret-path"]');
+            utilities.createPathEntries(secretPath, result.filePath.slice(0, -1));
+
+            // 1.25 <= 1.15
+            // 1.25 > 1.15 && 1.0 < 1.15
+            for (let index = 1; index <= 2; index += 0.25) {
+                if (index <= result.totalWeight) {
+                    let star = document.createElement('i');
+                    star.classList.add('fa-solid', 'fa-star', 'text-purple-600');
+                    starHolder.appendChild(star);
+                } else if (index > result.totalWeight && index - 0.25 < result.totalWeight) {
+                    let star = document.createElement('i');
+                    star.classList.add('fa-solid', 'fa-star-half-stroke', 'text-purple-600');
+                    starHolder.appendChild(star);
+                } else {
+                    let star = document.createElement('i');
+                    star.classList.add('fa-regular', 'fa-star');
+                    starHolder.appendChild(star);
+                }
+            }
+
+            table.appendChild(row);
+        }
+
+
+
+        // TODO: Perform an initial setup, then change the button's styles
+        // based on their "data-page" attribute.
+        function setupResultButtons() {
+            const buttonContainer = document.querySelector('[data-id="page-buttons"]');
+            const activeButtonTemplate = document.querySelector('[data-id="active-page-button--template"]');
+            const inactiveButtonTemplate = document.querySelector('[data-id="inactive-page-button--template"]');
+
+            // We start by clearing-out all existing page buttons.
+            buttonContainer.replaceChildren();
+
+            // We get either the current page or the default value of 1.
+            let currentPage = parseInt(getURLParameter('resultPage', '1'), 10);
+            const maxPage = Math.ceil(filteredResults.length / resultPageSize);
+
+            if (currentPage > maxPage || currentPage < 1)
+                currentPage = 1;
+
+
+            const firstPageButton = document.querySelector('[data-id="page-button--first"]');
+            const lastPageButton = document.querySelector('[data-id="page-button--last"]');
+
+            firstPageButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                setURLParameter('resultPage', 1);
+                setupResultButtons();
+            });
+
+            lastPageButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                setURLParameter('resultPage', maxPage);
+                setupResultButtons();
+            });
+
+            const allowedPages = 2;
+            const availableLeftPages = Math.min(allowedPages, currentPage - 1);
+            const availableRightPages = Math.min(allowedPages, maxPage - currentPage);
+
+
+            const startingIndex = currentPage - availableLeftPages;
+            const endingIndex = currentPage + availableRightPages;
+
+            let button;
+
+            for (let page = startingIndex; page <= endingIndex; page++) {
+                if (currentPage === page)
+                    button = activeButtonTemplate.content.firstElementChild.cloneNode(true);
+                else
+                    button = inactiveButtonTemplate.content.firstElementChild.cloneNode(true);
+
+                button.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    setURLParameter('resultPage', page);
+                    setupResultButtons();
+                });
+
+                button.setAttribute('data-page', page);
+                button.textContent = page.toString();
+                buttonContainer.appendChild(button);
+            }
+
+            const table = document.querySelector('[data-id="secrets"]');
+            table.replaceChildren();
+
+            const pageSize = 20;
+            let startingRowIndex = ((currentPage - 1) * pageSize);
+
+            for (let index = startingRowIndex; index < startingRowIndex + 20; index++) {
+                let result = filteredResults[index];
+
+                if (result === undefined)
+                    continue;
+
+                if (index - ((currentPage - 1) * pageSize) > pageSize)
+                    break;
+
+                addResultRow(result);
+            }
+        }
+
+
+        window.addEventListener('load', async () => {
+            await riskCategories.setup();
+            await searchBox.setup();
+            await reportHeaders.setup();
+            await pageTabs.setup();
+
+            setupResultButtons();
+        })
+
+    </script>
+
+
+
+    <script>
+        window.addEventListener('popstate', (event) => {
+            event.preventDefault();
+            setupResultButtons();
+        });
+    </script>
+
+    <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style type="text/tailwindcss">
+        @tailwind components;
+
+        @layer components {
+            .risk-tab--active {
+                @apply whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium border-purple-500 text-purple-600 ;
+            }
+
+            .risk-tab--inactive {
+                @apply whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium border-transparent text-gray-500 hover:border-gray-200 hover:text-gray-700;
+            }
+
+            .risk-tab-counter--active {
+                @apply ml-2 hidden rounded-full py-0.5 px-2.5 text-xs font-medium md:inline-block bg-purple-100 text-purple-600;
+            }
+
+            .risk-tab-counter--inactive {
+                @apply ml-2 hidden rounded-full py-0.5 px-2.5 text-xs font-medium md:inline-block bg-gray-100 text-gray-900;
+            }
+
+            .page-tab--active {
+                @apply bg-gray-100 rounded-md px-3 py-2 text-sm font-medium text-gray-900;
+            }
+
+            .page-tab--inactive {
+                @apply hover:text-gray-700 rounded-md px-3 py-2 text-sm font-medium text-gray-900;
+            }
+        }
+    </style>
+
+</head>
+
+<body class="h-full bg-white">
+
+    <template data-id="path-entry--template">
+
+        <li>
+            <div class="flex items-center">
+                <i class="fa-solid fa-angle-right flex-shrink-0 text-gray-400"></i>
+                <span class="ml-2 text-sm font-medium text-gray-500">Users</span>
+            </div>
+        </li>
+
+    </template>
+
+    <template data-id="secret-row--template">
+
+        <li>
+            <div class="flex items-center py-5 px-4 sm:py-6 sm:px-0 cursor-pointer">
+                <div class="flex min-w-0 flex-1 items-center">
+                    <div class="flex-shrink-0">
+                        <i data-id="secret-icon" class="fa-solid fa-key text-gray-800 text-4xl px-2"></i>
+                    </div>
+
+                    <div class="min-w-0 flex-1 px-4 md:grid md:grid-cols-2 md:gap-4">
+                        <div>
+
+                            <nav class="flex" aria-label="Breadcrumb">
+                                <ol data-id="secret-path" role="list" class="flex flex-wrap items-center space-x-2">
+                                </ol>
+                            </nav>
+
+                            <p data-id="secret-name" class="truncate text-sm font-medium text-purple-600 underline">
+                                Base64 in Strings.xml</p>
+                            <p class="mt-2 flex items-center text-sm text-gray-500">
+                                <span data-id="secret" style="font-family: monospace;"
+                                    class="truncate max-w-md border border-gray-300 text-gray-500 bg-gray-100 rounded px-2">kY6</span>
+                            </p>
+                        </div>
+                        <div class="hidden md:block">
+                            <div>
+                                <p class="text-sm text-gray-900">
+                                    Quality of Detection
+                                </p>
+                                <p class="mt-2 flex items-center text-sm text-gray-500" data-id="quality-of-detection">
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <svg class="h-5 w-5 text-gray-400 group-hover:text-gray-700" viewBox="0 0 20 20" fill="currentColor"
+                        aria-hidden="true">
+                        <path fill-rule="evenodd"
+                            d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+                            clip-rule="evenodd" />
+                    </svg>
+                </div>
+            </div>
+        </li>
+
+    </template>
+
+
+    <template data-id="inactive-page-button--template">
+
+        <button
+            class="inline-flex items-center border-t-2 border-transparent px-4 pt-4 text-sm font-medium text-gray-500 hover:border-gray-200 hover:text-gray-700">2</button>
+
+    </template>
+
+
+    <template data-id="active-page-button--template">
+
+        <button
+            class="inline-flex items-center border-t-2 border-purple-500 px-4 pt-4 text-sm font-medium text-purple-600">1</button>
+
+    </template>
+
+
+    <div class="min-h-full">
+        <!-- Navbar -->
+        <nav class="bg-gray-50">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                <div class="relative flex h-16 items-center justify-between border-b border-gray-200">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fa-solid fa-magnifying-glass text-xl text-gray-400"></i>
+                        </div>
+
+                        <!-- Links section -->
+                        <div class="hidden lg:ml-10 lg:block">
+                            <div class="flex space-x-4" data-id="page-tabs">
+                                <button class="page-tab--inactive" data-page="page--graphs">Graphs</button>
+                                <button class="page-tab--active" data-page="page--secrets">Secrets</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-1 justify-center px-2 lg:ml-6 lg:justify-end">
+                        <!-- Search section -->
+                        <div class="w-full max-w-lg lg:max-w-xs">
+                            <label for="search" class="sr-only">Search</label>
+                            <div class="relative text-gray-400 focus-within:text-gray-500">
+                                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                        <path fill-rule="evenodd"
+                                            d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <form data-id="search-form">
+                                    <input data-id="search-box" id="search"
+                                        class="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-purple-600 sm:text-sm sm:leading-6"
+                                        placeholder="Search" type="search" name="search">
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </nav>
+
+        <!-- Page heading -->
+        <header class="bg-gray-50 py-8">
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 md:flex md:items-center md:justify-between">
+                <div class="min-w-0 flex-1">
+                    <nav class="flex" aria-label="Breadcrumb">
+                        <ol data-id="target-path-entries--header" role="list"
+                            class="flex flex-wrap items-center space-x-2">
+                        </ol>
+                    </nav>
+
+                    <h1 data-id="target-path--header"
+                        class="mt-2 text-2xl font-bold leading-7 text-gray-800 sm:truncate sm:text-3xl sm:tracking-tight">
+                        Application-3.0.2</h1>
+
+                    <div class="mt-1 flex flex-col sm:mt-0 sm:flex-row sm:flex-wrap sm:space-x-8">
+                        <div class="mt-2 flex items-center text-sm text-gray-500">
+                            <i class="fa-solid fa-key mr-1.5 flex-shrink-0 text-gray-400"></i>
+                            <span data-id="secret-count--header">Found 6 secrets</span>
+                        </div>
+                        <div class="mt-2 flex items-center text-sm text-gray-500">
+                            <i class="fa-solid fa-file mr-1.5 flex-shrink-0 text-gray-400"></i>
+                            <span data-id="file-coverage--header">Scanned 7 files</span>
+                        </div>
+                        <div class="mt-2 flex items-center text-sm text-gray-500">
+                            <i class="fa-solid fa-clock mr-1.5 flex-shrink-0 text-gray-400"></i>
+                            <span data-id="search-duration--header">Took 32.4 seconds</span>
+                        </div>
+                        <div class="mt-2 flex items-center text-sm text-gray-500">
+                            <i class="fa-solid fa-calendar mr-1.5 flex-shrink-0 text-gray-400"></i>
+                            <span data-id="timestamp--header">Completed March 9, 2023</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-5 flex xl:mt-0 xl:ml-4">
+
+                    <span class="ml-3 hidden sm:block">
+                        <button type="button" disabled="true"
+                            class="disabled inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                            <svg class="-ml-0.5 h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"
+                                aria-hidden="true">
+                                <path
+                                    d="M12.232 4.232a2.5 2.5 0 013.536 3.536l-1.225 1.224a.75.75 0 001.061 1.06l1.224-1.224a4 4 0 00-5.656-5.656l-3 3a4 4 0 00.225 5.865.75.75 0 00.977-1.138 2.5 2.5 0 01-.142-3.667l3-3z" />
+                                <path
+                                    d="M11.603 7.963a.75.75 0 00-.977 1.138 2.5 2.5 0 01.142 3.667l-3 3a2.5 2.5 0 01-3.536-3.536l1.225-1.224a.75.75 0 00-1.061-1.06l-1.224 1.224a4 4 0 105.656 5.656l3-3a4 4 0 00-.225-5.865z" />
+                            </svg>
+                            View
+                        </button>
+                    </span>
+
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <div class="mx-auto max-w-7xl sm:px-6 lg:px-8" data-id="pages">
+                <div data-id="page--secrets" class="pt-8 pb-16">
+                    <div class="px-4 sm:px-0">
+                        <h2 class="text-lg font-medium text-gray-900">Categories</h2>
+
+                        <!-- Tabs -->
+                        <div class="hidden sm:block">
+                            <div class="border-b border-gray-200">
+                                <nav class="mt-2 -mb-px flex space-x-8" aria-label="Tabs">
+                                    <button data-id="risk-tab--all" class="risk-tab--active">
+                                        All
+                                    </button>
+
+                                    <button data-id="risk-tab--high" class="risk-tab--inactive">
+                                        High Risk
+                                        <span data-id="risk-tab-counter--high" class="risk-tab-counter--inactive">1</span>
+                                    </button>
+
+                                    <button data-id="risk-tab--moderate" class="risk-tab--inactive">
+                                        Moderate Risk
+                                        <span data-id="risk-tab-counter--moderate" class="risk-tab-counter--inactive">1</span>
+                                    </button>
+
+                                    <button data-id="risk-tab--low" class="risk-tab--inactive">
+                                        Low Risk
+                                        <span data-id="risk-tab-counter--low" class="risk-tab-counter--inactive">1</span>
+                                    </button>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stacked list -->
+                    <ul role="list" class="mt-5 divide-y divide-gray-200 border-t border-gray-200 sm:mt-0 sm:border-t-0"
+                        data-id="secrets">
+                    </ul>
+
+                    <!-- Pagination -->
+                    <nav class="flex items-center justify-between border-t border-gray-200 px-4 sm:px-0"
+                        aria-label="Pagination">
+                        <div class="-mt-px flex w-0 flex-1">
+                            <button
+                                data-id="page-button--first"
+                                class="inline-flex items-center border-t-2 border-transparent pt-4 pr-1 text-sm font-medium text-gray-500 hover:border-gray-200 hover:text-gray-700">
+                                <i class="fa-solid fa-arrow-left-long mr-3 text-gray-400"></i> First
+                            </button>
+                        </div>
+                        <div class="hidden md:-mt-px md:flex" data-id="page-buttons">
+                            <button
+                                class="inline-flex items-center border-t-2 border-purple-500 px-4 pt-4 text-sm font-medium text-purple-600"
+                                aria-current="page">1</button>
+                        </div>
+                        <div class="-mt-px flex w-0 flex-1 justify-end">
+                            <button
+                                data-id="page-button--last"
+                                class="inline-flex items-center border-t-2 border-transparent pt-4 pl-1 text-sm font-medium text-gray-500 hover:border-gray-200 hover:text-gray-700">
+                                Last <i class="fa-solid fa-arrow-right-long ml-3 text-gray-400"></i>
+                            </button>
+                        </div>
+                    </nav>
+                </div>
+
+                <div data-id="page--graphs" class="hidden">
+                    <div class="divide-y divide-dashed pb-16">
+                        {% for title, chart in charts.items() %}
+                            <div class="pt-8">
+                                <h2 class="text-lg font-medium text-gray-900">{{ title }}</h2>
+
+                                {{ chart.to_html(include_plotlyjs=False, full_html=False) }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+
+</body>
+
+</html>
