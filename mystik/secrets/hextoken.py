@@ -39,12 +39,12 @@ class HexToken(Secret):
         if match_start != 0:
             start_character = chr(content[match_start - 1])
 
-        if start_character == '#':
-            weights.append({
-                'description': 'Similar to hex code',
-                'vector': 'HexToken',
-                'value': -0.125
-            })
+            if start_character == '#':
+                weights.append({
+                    'description': 'Similar to hex code',
+                    'vector': 'HexToken',
+                    'value': -0.125
+                })
 
         average_byte = get_average_byte(data)
 
