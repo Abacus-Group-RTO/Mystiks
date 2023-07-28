@@ -437,11 +437,11 @@
             for (let index = 1; index <= 2; index += 0.25) {
                 if (index <= result.totalWeight) {
                     let star = document.createElement('i');
-                    star.classList.add('fa-solid', 'fa-star', 'text-purple-600');
+                    star.classList.add('fa-solid', 'fa-star', 'text-orange-600');
                     starHolder.appendChild(star);
                 } else if (index > result.totalWeight && index - 0.25 < result.totalWeight) {
                     let star = document.createElement('i');
-                    star.classList.add('fa-solid', 'fa-star-half-stroke', 'text-purple-600');
+                    star.classList.add('fa-solid', 'fa-star-half-stroke', 'text-orange-600');
                     starHolder.appendChild(star);
                 } else {
                     let star = document.createElement('i');
@@ -557,49 +557,77 @@
 
     <script src="https://cdn.plot.ly/plotly-2.20.0.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
-        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <style>
+        .bg-zate-600 {
+            background-color: #42414D;
+        }
+
+        .bg-zate-700 {
+            background-color: #35343f;
+        }
+
+        .bg-zate-800 {
+            background-color: #2B2A33;
+        }
+
+        .border-zate-600 {
+            border-color: #42414D;
+        }
+
+        .bg-zate-900 {
+            background-color: #1C1B22;
+        }
+    </style>
 
     <style type="text/tailwindcss">
         @tailwind components;
 
         @layer components {
+
             .risk-tab--active {
-                @apply whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium border-purple-500 text-purple-600 ;
+                @apply whitespace-nowrap py-2 px-3 text-sm font-medium text-white hover:text-orange-300 transition-all border-t-2 border-x-2 border-white rounded-t-md hover:border-orange-500;
             }
 
             .risk-tab--inactive {
-                @apply whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium border-transparent text-gray-500 hover:border-gray-200 hover:text-gray-700;
+                @apply whitespace-nowrap py-2 px-3 text-sm font-medium text-gray-400 hover:text-orange-300 transition-all border-2 border-x-2 border-gray-500 rounded-t-md hover:border-orange-500;
             }
 
             .risk-tab-counter--active {
-                @apply ml-2 hidden rounded-full py-0.5 px-2.5 text-xs font-medium md:inline-block bg-purple-100 text-purple-600;
+                @apply ml-2 hidden rounded-full py-0.5 px-2.5 text-xs font-medium md:inline-block bg-white text-black;
             }
 
             .risk-tab-counter--inactive {
-                @apply ml-2 hidden rounded-full py-0.5 px-2.5 text-xs font-medium md:inline-block bg-gray-100 text-gray-900;
+                @apply ml-2 hidden rounded-full py-0.5 px-2.5 text-xs font-medium md:inline-block bg-gray-500 text-white;
             }
 
             .page-tab--active {
-                @apply bg-gray-100 rounded-md px-3 py-2 text-sm font-medium text-gray-900;
+                @apply rounded-t-md px-3 py-2 text-sm font-medium text-white border-t-2 border-x-2 border-white hover:border-orange-500 hover:text-orange-300 transition-all;
+                /* @apply bg-orange-600 rounded-md px-3 py-2 text-sm font-medium text-white border-2 border-orange-600 hover:bg-orange-700 hover:border-orange-700; */
             }
 
             .page-tab--inactive {
-                @apply hover:text-gray-700 rounded-md px-3 py-2 text-sm font-medium text-gray-900;
+                /* @apply bg-orange-600 rounded-md px-3 py-2 text-sm font-medium text-white border-2 border-orange-600 hover:bg-orange-700 hover:border-orange-700; */
+                @apply rounded-t-md px-3 py-2 text-sm font-medium text-gray-400 border-2 border-gray-500 hover:border-orange-500 hover:text-orange-300 transition-all;
+            }
+
+            .hex-column {
+                @apply p-1 font-bold text-white;
             }
         }
     </style>
 
 </head>
 
-<body class="h-full bg-white">
+<body class="h-full bg-zate-600">
 
     <template data-id="path-entry--template">
 
         <li>
             <div class="flex items-center">
-                <i class="fa-solid fa-angle-right flex-shrink-0 text-gray-400"></i>
-                <span class="ml-2 text-sm font-medium text-gray-500">Users</span>
+                <i class="fa-solid fa-angle-right flex-shrink-0 text-white"></i>
+                <span class="ml-2 text-sm font-medium text-white">Users</span>
             </div>
         </li>
 
@@ -611,7 +639,7 @@
             <div class="flex items-center py-5 px-4 sm:py-6 sm:px-0 cursor-pointer">
                 <div class="flex min-w-0 flex-1 items-center">
                     <div class="flex-shrink-0">
-                        <i data-id="secret-icon" class="fa-solid fa-key text-gray-800 text-4xl px-2"></i>
+                        <i data-id="secret-icon" class="fa-solid fa-key text-white text-4xl px-2"></i>
                     </div>
 
                     <div class="min-w-0 flex-1 px-4 md:grid md:grid-cols-2 md:gap-4">
@@ -622,19 +650,19 @@
                                 </ol>
                             </nav>
 
-                            <p data-id="secret-name" class="truncate text-sm font-medium text-purple-600 underline">
+                            <p data-id="secret-name" class="truncate text-sm font-medium text-orange-600 underline">
                                 Base64 in Strings.xml</p>
-                            <p class="mt-2 flex items-center text-sm text-gray-500">
+                            <p class="mt-2 flex items-center text-sm text-white">
                                 <span data-id="secret" style="font-family: monospace;"
-                                    class="truncate max-w-md border border-gray-300 text-gray-500 bg-gray-100 rounded px-2">kY6</span>
+                                    class="truncate max-w-md border border-gray-300 text-white bg-gray-100 rounded px-2">kY6</span>
                             </p>
                         </div>
                         <div class="hidden md:block">
                             <div>
-                                <p class="text-sm text-gray-900">
+                                <p class="text-sm text-white">
                                     Quality of Detection
                                 </p>
-                                <p class="mt-2 flex items-center text-sm text-gray-500" data-id="quality-of-detection">
+                                <p class="mt-2 flex items-center text-sm text-white" data-id="quality-of-detection">
                                 </p>
                             </div>
                         </div>
@@ -657,7 +685,7 @@
     <template data-id="inactive-page-button--template">
 
         <button
-            class="inline-flex items-center border-t-2 border-transparent px-4 pt-4 text-sm font-medium text-gray-500 hover:border-gray-200 hover:text-gray-700">2</button>
+            class="inline-flex items-center px-4 pt-4 text-sm font-medium text-white hover:text-gray-200">2</button>
 
     </template>
 
@@ -665,19 +693,19 @@
     <template data-id="active-page-button--template">
 
         <button
-            class="inline-flex items-center border-t-2 border-purple-500 px-4 pt-4 text-sm font-medium text-purple-600">1</button>
+            class="inline-flex items-center px-4 pt-4 text-sm font-medium text-white">1</button>
 
     </template>
 
 
     <div class="min-h-full">
         <!-- Navbar -->
-        <nav class="bg-gray-50">
+        <nav class="bg-zate-800">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <div class="relative flex h-16 items-center justify-between border-b border-gray-200">
+                <div class="relative flex h-16 items-center justify-between"> <!--   border-b border-gray-200 -->
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
-                            <i class="fa-solid fa-magnifying-glass text-xl text-gray-400"></i>
+                            <i class="fa-solid fa-dragon text-xl text-orange-500"></i>
                         </div>
 
                         <!-- Links section -->
@@ -693,7 +721,7 @@
                         <!-- Search section -->
                         <div class="w-full max-w-lg lg:max-w-xs">
                             <label for="search" class="sr-only">Search</label>
-                            <div class="relative text-gray-400 focus-within:text-gray-500">
+                            <div class="relative text-gray-500 focus-within:text-white transition-all">
                                 <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                                     <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                         <path fill-rule="evenodd"
@@ -703,7 +731,7 @@
                                 </div>
                                 <form data-id="search-form">
                                     <input data-id="search-box" id="search"
-                                        class="block w-full rounded-md border-0 bg-white py-1.5 pl-10 pr-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-purple-600 sm:text-sm sm:leading-6"
+                                        class="shadow-inner transition-all block w-full rounded-md border-0 bg-zate-900 py-1.5 pl-10 pr-3 text-white ring-2 ring-transparent outline-none text-gray-500 focus:outline-none focus:ring-orange-500 sm:text-sm sm:leading-6"
                                         placeholder="Search" type="search" name="search">
                                 </form>
                             </div>
@@ -716,7 +744,7 @@
         </nav>
 
         <!-- Page heading -->
-        <header class="bg-gray-50 py-8">
+        <header class="bg-zate-800 pt-2 pb-6">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 md:flex md:items-center md:justify-between">
                 <div class="min-w-0 flex-1">
                     <nav class="flex" aria-label="Breadcrumb">
@@ -726,75 +754,58 @@
                     </nav>
 
                     <h1 data-id="target-path--header"
-                        class="mt-2 text-2xl font-bold leading-7 text-gray-800 sm:truncate sm:text-3xl sm:tracking-tight">
+                        class="text-2xl font-bold leading-7 text-white sm:truncate sm:text-3xl sm:tracking-tight">
                         Application-3.0.2</h1>
 
-                    <div class="mt-1 flex flex-col sm:mt-0 sm:flex-row sm:flex-wrap sm:space-x-8">
-                        <div class="mt-2 flex items-center text-sm text-gray-500">
-                            <i class="fa-solid fa-key mr-1.5 flex-shrink-0 text-gray-400"></i>
-                            <span data-id="secret-count--header">Found 6 secrets</span>
+                    <div class="flex flex-col sm:mt-0 sm:flex-row sm:flex-wrap sm:space-x-8 pt-2">
+                        <div class="flex items-center text-sm text-gray-400">
+                            <i class="fa-solid fa-key mr-1.5 flex-shrink-0"></i>
+                            <span data-id="secret-count--header">Found 6 potential secrets</span>
                         </div>
-                        <div class="mt-2 flex items-center text-sm text-gray-500">
-                            <i class="fa-solid fa-file mr-1.5 flex-shrink-0 text-gray-400"></i>
+                        <div class="flex items-center text-sm text-gray-400">
+                            <i class="fa-solid fa-file mr-1.5 flex-shrink-0"></i>
                             <span data-id="file-coverage--header">Scanned 7 files</span>
                         </div>
-                        <div class="mt-2 flex items-center text-sm text-gray-500">
-                            <i class="fa-solid fa-clock mr-1.5 flex-shrink-0 text-gray-400"></i>
+                        <div class="flex items-center text-sm text-gray-400">
+                            <i class="fa-solid fa-clock mr-1.5 flex-shrink-0"></i>
                             <span data-id="search-duration--header">Took 32.4 seconds</span>
                         </div>
-                        <div class="mt-2 flex items-center text-sm text-gray-500">
-                            <i class="fa-solid fa-calendar mr-1.5 flex-shrink-0 text-gray-400"></i>
+                        <div class="flex items-center text-sm text-gray-400">
+                            <i class="fa-solid fa-calendar mr-1.5 flex-shrink-0"></i>
                             <span data-id="timestamp--header">Completed March 9, 2023</span>
                         </div>
                     </div>
-                </div>
-                <div class="mt-5 flex xl:mt-0 xl:ml-4">
-
-                    <span class="ml-3 hidden sm:block">
-                        <button type="button" disabled="true"
-                            class="disabled inline-flex items-center gap-x-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
-                            <svg class="-ml-0.5 h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor"
-                                aria-hidden="true">
-                                <path
-                                    d="M12.232 4.232a2.5 2.5 0 013.536 3.536l-1.225 1.224a.75.75 0 001.061 1.06l1.224-1.224a4 4 0 00-5.656-5.656l-3 3a4 4 0 00.225 5.865.75.75 0 00.977-1.138 2.5 2.5 0 01-.142-3.667l3-3z" />
-                                <path
-                                    d="M11.603 7.963a.75.75 0 00-.977 1.138 2.5 2.5 0 01.142 3.667l-3 3a2.5 2.5 0 01-3.536-3.536l1.225-1.224a.75.75 0 00-1.061-1.06l-1.224 1.224a4 4 0 105.656 5.656l3-3a4 4 0 00-.225-5.865z" />
-                            </svg>
-                            View
-                        </button>
-                    </span>
-
                 </div>
             </div>
         </header>
 
         <main>
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8" data-id="pages">
-                <div data-id="page--secrets" class="pt-8 pb-16">
+                <div data-id="page--secrets" class="pt-6 pb-12">
                     <div class="px-4 sm:px-0">
-                        <h2 class="text-lg font-medium text-gray-900">Categories</h2>
 
                         <!-- Tabs -->
                         <div class="hidden sm:block">
-                            <div class="border-b border-gray-200">
-                                <nav class="mt-2 -mb-px flex space-x-8" aria-label="Tabs">
+                            <div>
+                                <nav class="my-2 flex space-x-4" aria-label="Tabs">
                                     <button data-id="risk-tab--all" class="risk-tab--active">
-                                        All
+                                        All Risks
+                                        <!-- <span data-id="risk-tab-counter--high" class="risk-tab-counter--active">1</span> -->
                                     </button>
 
                                     <button data-id="risk-tab--high" class="risk-tab--inactive">
-                                        High Risk
-                                        <span data-id="risk-tab-counter--high" class="risk-tab-counter--inactive">1</span>
+                                        High Risks
+                                        <!-- <span data-id="risk-tab-counter--high" class="risk-tab-counter--inactive">1</span> -->
                                     </button>
 
                                     <button data-id="risk-tab--moderate" class="risk-tab--inactive">
-                                        Moderate Risk
-                                        <span data-id="risk-tab-counter--moderate" class="risk-tab-counter--inactive">1</span>
+                                        Moderate Risks
+                                        <!-- <span data-id="risk-tab-counter--moderate" class="risk-tab-counter--inactive">1</span> -->
                                     </button>
 
                                     <button data-id="risk-tab--low" class="risk-tab--inactive">
-                                        Low Risk
-                                        <span data-id="risk-tab-counter--low" class="risk-tab-counter--inactive">1</span>
+                                        Low Risks
+                                        <!-- <span data-id="risk-tab-counter--low" class="risk-tab-counter--inactive">1</span> -->
                                     </button>
                                 </nav>
                             </div>
@@ -802,30 +813,238 @@
                     </div>
 
                     <!-- Stacked list -->
-                    <ul role="list" class="mt-5 divide-y divide-gray-200 border-t border-gray-200 sm:mt-0 sm:border-t-0"
+                    <ul role="list" class="mt-5 sm:mt-0 space-y-2"
                         data-id="secrets">
+
+                        <li class="bg-zate-700 p-1 rounded-md shadow-inner transition-all"> <!-- border-2 border-transparent hover:border-orange-500"> -->
+                            <div class="flex items-center px-4 py-4 sm:px-0 h-full">
+                                <div class="flex min-w-0 flex-1 items-center">
+                                    <div class="w-full px-3 space-y-4">
+
+                                        <div class="min-w-0 relative flex-auto text-white">
+                                            <h2 class="font-semibold truncate sm:pr-20 mb-0">Google API Token</h2>
+                                            <dl class="flex flex-wrap text-sm leading-6 font-medium space-y-2">
+                                                <div class="hidden absolute top-0 right-0 sm:flex items-center space-x-1 bg-zate-800 text-gray-500 px-3 py-2 rounded-md font-bold">
+                                                    <i class="fa-solid fa-star text-orange-500"></i>
+                                                    <i class="fa-solid fa-star text-orange-500"></i>
+                                                    <i class="fa-solid fa-star text-orange-500"></i>
+                                                    <i class="fa-solid fa-star text-orange-500"></i>
+                                                    <i class="fa-solid fa-star"></i>
+                                                </div>
+
+                                                <button class="absolute px-6 py-1 bottom-0 right-0 items-center border-2 border-gray-500 rounded-md font-bold text-gray-500 hover:text-orange-300 hover:border-orange-500 transition-all">
+                                                    <i class="fa-solid fa-minus"></i>
+                                                </button>
+
+                                                <div class="flex w-full font-normal">
+                                                    <span class="text-gray-400 truncate bg-zate-800 px-3 py-1 rounded-md space-x-2">
+                                                        <i class="fa-solid fa-file"></i>
+                                                        <span class="select-all" style="font-family: monospace">C:/Users/Administrator/Desktop/mystik/secrets/__pycache__/test.pyc</span>
+                                                    </span>
+                                                </div>
+
+                                                <div class="flex w-full font-normal">
+                                                    <span class="text-gray-400 truncate bg-zate-800 px-3 py-1 rounded-md space-x-2">
+                                                        <i class="fa-solid fa-key"></i>
+                                                        <span class="select-all" style="font-family: monospace">AIzaSyAwkUR61tzMvJYaKOzbovIffCPBVpijnl0</span>
+                                                    </span>
+                                                </div>
+                                            </dl>
+                                        </div>
+
+                                    <div class="space-y-4" data-id="details">
+                                        <hr class="border-zate-600"/>
+
+                                        <div>
+                                            <h2 class="font-semibold truncate sm:pr-20 mb-0 text-white">Description</h2>
+
+                                            <p class="text-gray-400 mt-2">Exposing Google API tokens to users can be a serious security problem because these tokens can provide access to sensitive information and resources. If an attacker gains access to a user's Google API token, they could potentially access the user's Google account, including their email, contacts, and stored documents. Additionally, Google API tokens can be used to access third-party services that are authorized to use Google APIs, potentially granting an attacker access to even more sensitive information. Therefore, it is crucial to handle Google API tokens securely and keep them private to prevent unauthorized access.</p>
+                                        </div>
+
+                                        <div>
+                                            <h2 class="font-semibold truncate sm:pr-20 mb-0 text-white">Indicators</h2>
+
+                                            <div class="flex flex-wrap gap-2 text-sm font-bold text-gray-400 mt-2">
+                                                <div class="bg-zate-800 px-3 py-1 rounded-md truncate space-x-2">
+                                                    <i class="fa-solid fa-plus"></i>
+                                                    <span>Surrounded by double-quotes</span>
+                                                </div>
+                                                <div class="bg-zate-800 px-3 py-1 rounded-md truncate space-x-2">
+                                                    <i class="fa-solid fa-plus"></i>
+                                                    <span>Contains notable entropy</span>
+                                                </div>
+                                                <div class="bg-zate-800 px-3 py-1 rounded-md truncate space-x-2">
+                                                    <i class="fa-solid fa-plus"></i>
+                                                    <span>Contains Google API token landmarks</span>
+                                                </div>
+                                                <div class="bg-zate-800 px-3 py-1 rounded-md truncate space-x-2">
+                                                    <i class="fa-solid fa-minus"></i>
+                                                    <span>Found in binary file</span>
+                                                </div>
+                                                <div class="bg-zate-800 px-3 py-1 rounded-md truncate space-x-2">
+                                                    <i class="fa-solid fa-plus"></i>
+                                                    <span>Surrounded by double-quotes</span>
+                                                </div>
+                                                <div class="bg-zate-800 px-3 py-1 rounded-md truncate space-x-2">
+                                                    <i class="fa-solid fa-plus"></i>
+                                                    <span>Contains notable entropy</span>
+                                                </div>
+                                                <div class="bg-zate-800 px-3 py-1 rounded-md truncate space-x-2">
+                                                    <i class="fa-solid fa-plus"></i>
+                                                    <span>Contains Google API token landmarks</span>
+                                                </div>
+                                                <div class="bg-zate-800 px-3 py-1 rounded-md truncate space-x-2">
+                                                    <i class="fa-solid fa-minus"></i>
+                                                    <span>Found in binary file</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+
+                                        <div>
+                                            <h2 class="font-semibold truncate sm:pr-20 mb-0 text-white">Context</h2>
+
+                                            <div class="flex text-white mt-2" style="font-family: monospace;">
+                                                <div class="grid">
+                                                    <span class="bg-zate-800 px-2 select-all">0000001F</span>
+                                                    <span class="bg-zate-800 px-2 select-all">0000001F</span>
+                                                    <span class="bg-zate-800 px-2 select-all">0000001F</span>
+                                                    <span class="bg-zate-800 px-2 select-all">0000001F</span>
+                                                    <span class="bg-zate-800 px-2 select-all">0000001F</span>
+                                                    <span class="bg-zate-800 px-2 select-all">0000001F</span>
+                                                    <span class="bg-zate-800 px-2 select-all">0000001F</span>
+                                                    <span class="bg-zate-800 px-2 select-all">0000001F</span>
+                                                    <span class="bg-zate-800 px-2 select-all">0000001F</span>
+                                                </div>
+
+                                                <div class="ml-4">
+                                                    <div class="space-x-2">
+                                                        <span>00</span><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span><span>09</span><span>0a</span><span>0b</span><span>0c</span><span>0d</span><span>0e</span><span>0f</span>
+                                                    </div>
+                                                    <div class="space-x-2">
+                                                        <span>00</span><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span><span>09</span><span>0a</span><span>0b</span><span>0c</span><span>0d</span><span>0e</span><span>0f</span>
+                                                    </div>
+                                                    <div class="space-x-2">
+                                                        <span>00</span><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span><span>09</span><span>0a</span><span>0b</span><span>0c</span><span>0d</span><span>0e</span><span>0f</span>
+                                                    </div>
+                                                    <div class="space-x-2">
+                                                        <span>00</span><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span><span>09</span><span>0a</span><span>0b</span><span>0c</span><span>0d</span><span>0e</span><span>0f</span>
+                                                    </div>
+                                                    <div class="space-x-2">
+                                                        <span>00</span><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span><span>09</span><span>0a</span><span>0b</span><span>0c</span><span>0d</span><span>0e</span><span>0f</span>
+                                                    </div>
+                                                    <div class="space-x-2">
+                                                        <span>00</span><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span><span>09</span><span>0a</span><span>0b</span><span>0c</span><span>0d</span><span>0e</span><span>0f</span>
+                                                    </div>
+                                                    <div class="space-x-2">
+                                                        <span>00</span><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span><span>09</span><span>0a</span><span>0b</span><span>0c</span><span>0d</span><span>0e</span><span>0f</span>
+                                                    </div>
+                                                    <div class="space-x-2">
+                                                        <span>00</span><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span><span>09</span><span>0a</span><span>0b</span><span>0c</span><span>0d</span><span>0e</span><span>0f</span>
+                                                    </div>
+                                                    <div class="space-x-2">
+                                                        <span>00</span><span>01</span><span>02</span><span>03</span><span>04</span><span>05</span><span>06</span><span>07</span><span>08</span><span>09</span><span>0a</span><span>0b</span><span>0c</span><span>0d</span><span>0e</span><span>0f</span>
+                                                    </div>
+                                                </div>
+
+                                                <div class="ml-8">
+                                                    <div class="space-x-2">
+                                                        <span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span>
+                                                    </div>
+                                                    <div class="space-x-2">
+                                                        <span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span>
+                                                    </div>
+                                                    <div class="space-x-2">
+                                                        <span>.</span><span>.</span><span>.</span><span>.</span><span>A</span><span>P</span><span>P</span><span>L</span><span>E</span><span>S</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span>
+                                                    </div>
+                                                    <div class="space-x-2">
+                                                        <span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span>
+                                                    </div>
+                                                    <div class="space-x-2">
+                                                        <span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span>
+                                                    </div>
+                                                    <div class="space-x-2">
+                                                        <span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span>
+                                                    </div>
+                                                    <div class="space-x-2">
+                                                        <span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span>
+                                                    </div>
+                                                    <div class="space-x-2">
+                                                        <span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span>
+                                                    </div>
+                                                    <div class="space-x-2">
+                                                        <span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span><span>.</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+
+                        <li class="bg-zate-700 p-1 rounded-md shadow-inner transition-all"> <!-- border-2 border-transparent hover:border-orange-500"> -->
+                            <div class="flex items-center px-4 py-4 sm:px-0 h-full">
+                                <div class="flex min-w-0 flex-1 items-center">
+                                    <div class="w-full px-3">
+
+
+                                    <div class="min-w-0 relative flex-auto text-white">
+                                        <h2 class="font-semibold truncate sm:pr-20 mb-0">Google API Key</h2>
+                                        <dl class="flex flex-wrap text-sm leading-6 font-medium space-y-2">
+                                            <div class="hidden absolute top-0 right-0 sm:flex items-center space-x-1 bg-zate-800 text-gray-500 px-3 py-2 rounded-md font-bold">
+                                                <i class="fa-solid fa-star text-orange-500"></i>
+                                                <i class="fa-solid fa-star text-orange-500"></i>
+                                                <i class="fa-solid fa-star"></i>
+                                                <i class="fa-solid fa-star"></i>
+                                                <i class="fa-solid fa-star"></i>
+                                            </div>
+
+                                            <button class="absolute px-6 py-1 bottom-0 right-0 items-center border-2 border-gray-500 rounded-md font-bold text-gray-500 hover:text-orange-300 hover:border-orange-500 transition-all">
+                                                <i class="fa-solid fa-plus"></i>
+                                            </button>
+
+                                            <div class="flex w-full font-normal">
+                                                <span class="text-gray-400 truncate bg-zate-800 px-3 py-1 rounded-md space-x-2">
+                                                    <i class="fa-solid fa-file"></i>
+                                                    <span class="select-all" style="font-family: monospace">C:/Users/Administrator/Desktop/mystik/secrets/__pycache__/test.pyc</span>
+                                                </span>
+                                            </div>
+
+                                            <div class="flex w-full font-normal">
+                                                <span class="text-gray-400 truncate bg-zate-800 px-3 py-1 rounded-md space-x-2">
+                                                    <i class="fa-solid fa-key"></i>
+                                                    <span class="select-all" style="font-family: monospace">AIzaSyAwkUR61tzMvJYaKOzbovIffCPBVpijnl0</span>
+                                                </span>
+                                            </div>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+
                     </ul>
 
                     <!-- Pagination -->
-                    <nav class="flex items-center justify-between border-t border-gray-200 px-4 sm:px-0"
+                    <nav class="flex items-center justify-between px-4 sm:px-0"
                         aria-label="Pagination">
                         <div class="-mt-px flex w-0 flex-1">
                             <button
                                 data-id="page-button--first"
-                                class="inline-flex items-center border-t-2 border-transparent pt-4 pr-1 text-sm font-medium text-gray-500 hover:border-gray-200 hover:text-gray-700">
-                                <i class="fa-solid fa-arrow-left-long mr-3 text-gray-400"></i> First
+                                class="inline-flex items-center pt-4 pr-1 text-sm font-medium text-white hover:text-orange-300 transition-all">
+                                <i class="fa-solid fa-arrow-left-long mr-3 text-white"></i> First
                             </button>
                         </div>
                         <div class="hidden md:-mt-px md:flex" data-id="page-buttons">
                             <button
-                                class="inline-flex items-center border-t-2 border-purple-500 px-4 pt-4 text-sm font-medium text-purple-600"
+                                class="inline-flex items-center px-4 pt-4 text-sm font-medium text-white"
                                 aria-current="page">1</button>
                         </div>
                         <div class="-mt-px flex w-0 flex-1 justify-end">
                             <button
                                 data-id="page-button--last"
-                                class="inline-flex items-center border-t-2 border-transparent pt-4 pl-1 text-sm font-medium text-gray-500 hover:border-gray-200 hover:text-gray-700">
-                                Last <i class="fa-solid fa-arrow-right-long ml-3 text-gray-400"></i>
+                                class="inline-flex items-center pt-4 pl-1 text-sm font-medium text-white hover:text-orange-300 transition-all">
+                                Last <i class="fa-solid fa-arrow-right-long ml-3 text-white"></i>
                             </button>
                         </div>
                     </nav>
@@ -835,7 +1054,7 @@
                     <div class="divide-y divide-dashed pb-16">
                         {% for title, chart in charts.items() %}
                             <div class="pt-8">
-                                <h2 class="text-lg font-medium text-gray-900">{{ title }}</h2>
+                                <h2 class="text-lg font-medium text-white">{{ title }}</h2>
 
                                 {{ chart.to_html(include_plotlyjs=False, full_html=False) }}
                             </div>
