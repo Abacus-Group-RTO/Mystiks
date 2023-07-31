@@ -141,19 +141,51 @@ def main():
     # print('[i] The report was saved to:', output_path)
 
     started_at = time()
-    output = recursive_regex_search(str(target_path), ['ACCESS[_A-Z]+'])
+    output = recursive_regex_search(str(target_path), [('Generic Access', 'ACCESS[_A-Z]+')])
 
-    from binascii import unhexlify
+    # from binascii import unhexlify
 
-    for item in output:
-        print('match:')
-        print('\tfile_name:', item.file_name)
-        print('\tcontext:', unhexlify(item.context))
-        print('\tcontext_start:', item.context_start)
-        print('\tcontext_end:', item.context_end)
-        print('\tcapture:', unhexlify(item.capture))
-        print('\tcapture_start:', item.capture_start)
-        print('\tcapture_end:', item.capture_end)
+    # for item in output:
+    #     print('match:')
+    #     print('\tfile_name:', item.file_name)
+    #     print('\tcontext:', unhexlify(item.context))
+    #     print('\tcontext_start:', item.context_start)
+    #     print('\tcontext_end:', item.context_end)
+    #     print('\tcapture:', unhexlify(item.capture))
+    #     print('\tcapture_name:', item.capture_name)
+    #     print('\tcapture_start:', item.capture_start)
+    #     print('\tcapture_end:', item.capture_end)
+
+    with open('items.js', 'w') as file:
+        items = []
+
+        for item in output:
+            items.append({
+                'uuid': item.uuid,
+                'fileName': item.file_name,
+                'context': item.context,
+                'contextStart': item.context_start,
+                'contextEnd': item.context_end,
+                'capture': item.capture,
+                'pattern': item.pattern,
+                'patternName': item.pattern_name,
+                'captureStart': item.capture_start,
+                'captureEnd': item.capture_end,
+                'indicators': [('Matched pattern', 1)]
+            })
+
+        manifest = to_json({
+            'items': items,
+            'descriptions': {
+                'Generic Access': [
+                    'Permissions in the Android Manifest file define the types of operations and data the application can access on the user\'s device. There are different categories of permissions depending on the potential risk to user privacy, divided mainly into Normal, Dangerous, Signature, and Special permissions.',
+                    'Normal permissions cover areas where your app needs to access data or resources outside the app\'s sandbox but pose minimal risk to the user\'s privacy. For example, an app might need to access the internet or set the time zone.',
+                    'Dangerous permissions, on the other hand, could potentially involve the user\'s private data or affect the operation of other apps or the system. This includes permissions like reading or writing to the user\'s contacts, accessing precise location, reading SMS messages, etc. For such permissions, the app must explicitly request the user\'s approval at runtime.',
+                ]
+            }
+        }, indent=' ' * 4)
+
+        file.write('window.manifest = ' + manifest)
 
     print(f'{time() - started_at:.2f} seconds')
 

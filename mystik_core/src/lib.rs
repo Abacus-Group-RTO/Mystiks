@@ -1,20 +1,27 @@
+use base64::{Engine as _, engine::general_purpose};
+use num_cpus;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use regex::bytes::Regex;
 use std::fs::File;
 use std::io::prelude::*;
-use std::sync::mpsc::channel;
 use std::sync::{Arc, Mutex};
+use std::sync::mpsc::channel;
 use std::thread;
+use uuid::Uuid;
 use walkdir::WalkDir;
-use std::cmp;
-use num_cpus;
 
 
 #[pyclass]
 struct Match {
     #[pyo3(get, set)]
+    uuid: String,
+    #[pyo3(get, set)]
     file_name: String,
+    #[pyo3(get, set)]
+    pattern: String,
+    #[pyo3(get, set)]
+    pattern_name: String,
     #[pyo3(get, set)]
     capture: String,
     #[pyo3(get, set)]
@@ -32,14 +39,18 @@ struct Match {
 #[pymethods]
 impl Match {
     fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("Match(file_name={}, capture={}, capture_start={}, capture_end={}, context={}, context_start={}, context_end={})", self.file_name, self.capture, self.capture_start, self.capture_end, self.context, self.context_start, self.context_end))
+        Ok(format!("Match(file_name={}, capture={}, pattern_name={}, capture_start={}, capture_end={}, context={}, context_start={}, context_end={})",
+            self.file_name, self.capture, self.pattern_name, self.capture_start, self.capture_end, self.context, self.context_start, self.context_end))
     }
 }
 
 #[pyfunction]
-fn recursive_regex_search(path: &str, patterns: Vec<&str>) -> PyResult<Vec<Match>> {
+fn recursive_regex_search(path: &str, patterns: Vec<(String, &str)>) -> PyResult<Vec<Match>> {
     let mut matching_files = Vec::new();
-    let regex_patterns: Vec<Regex> = patterns.iter().map(|pattern| Regex::new(pattern).unwrap()).collect();
+    let regex_patterns: Vec<(String, Regex)> = patterns
+        .iter()
+        .map(|(name, pattern)| (name.clone(), Regex::new(pattern).unwrap()))
+        .collect();
 
     let (tx, rx) = channel::<Match>();
     let tx = Arc::new(Mutex::new(tx));
@@ -61,17 +72,29 @@ fn recursive_regex_search(path: &str, patterns: Vec<&str>) -> PyResult<Vec<Match
             let mut contents = Vec::new();
             file.read_to_end(&mut contents).unwrap();
 
-            for pattern in regex_patterns {
+            for (pattern_name, pattern) in regex_patterns {
                 for match_obj in pattern.find_iter(&contents) {
-                    let context_start = cmp::max(0, match_obj.start() - 64);
-                    let context_end = cmp::min(contents.len(), match_obj.end() + 64);
+                    let mut context_start = 0;
+
+                    if match_obj.start() > 128 {
+                        context_start = match_obj.start() - 128;
+                    }
+
+                    let mut context_end = contents.len();
+
+                    if context_end > match_obj.end() + 128 {
+                        context_end = match_obj.end() + 128;
+                    }
 
                     tx.lock().unwrap().send(Match {
+                        uuid: Uuid::new_v4().to_string(),
                         file_name: path.display().to_string(),
+                        pattern: pattern.as_str().to_string(),
+                        pattern_name: pattern_name.clone(),
                         capture_start: match_obj.start(),
                         capture_end: match_obj.end(),
-                        capture: hex::encode(&contents[match_obj.start()..match_obj.end()]),
-                        context: hex::encode(&contents[context_start..context_end]),
+                        capture: general_purpose::STANDARD.encode(&contents[match_obj.start()..match_obj.end()]),
+                        context: general_purpose::STANDARD.encode(&contents[context_start..context_end]),
                         context_start: context_start,
                         context_end: context_end,
                     }).unwrap();
