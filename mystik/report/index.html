@@ -5,12 +5,18 @@
     <meta charset="utf-8">
     <title>Findings</title>
 
+    <script src="scripts/utilities.js"></script>
+    <script src="scripts/censorship.js"></script>
     <script src="scripts/items.js"></script>
 
     <script src="vendors/tailwind-3.3.3.js"></script>
     <link rel="stylesheet" href="vendors/fontawesome-6.4.0/css/all.min.css" />
 
     <style>
+        .monospace {
+            font-family: monospace;
+        }
+
         .bg-zate-600 {
             background-color: #42414D;
         }
@@ -573,18 +579,32 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             setupViewDetailsButtons();
+        });
+    </script>
 
-            const visibilityButton = document.querySelector('[data-id="visibility-toggle"]');
-            const visibilityIcon = visibilityButton.querySelector('i');
+    <!-- This script sets up our censorship functionality. -->
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            const censorshipButton = document.querySelector('[data-id="censorship-button"]');
+            const icon = censorshipButton.querySelector('i');
 
-            visibilityButton.addEventListener('click', (event) => {
-                visibilityIcon.classList.toggle('fa-eye');
-                visibilityIcon.classList.toggle('fa-eye-slash');
-
-                for (const text of document.querySelectorAll('[data-id="value-censored"]')) {
-                    text.classList.toggle('blur-sm');
+            // We ensure the correct icon appears at first.
+            if (censorship.checkCensorship()) {
+                if (icon.classList.contains('fa-eye-slash')) {
+                    icon.classList.remove('fa-eye-slash');
                 }
+
+                icon.classList.add('fa-eye');
+            }
+
+            // We make sure that anytime the button is clicked, we switch the icon.
+            censorshipButton.addEventListener('click', () => {
+                icon.classList.toggle('fa-eye');
+                icon.classList.toggle('fa-eye-slash');
             });
+
+            // We finally setup our censorship.
+            censorship.setupCensorship();
         });
     </script>
 
@@ -661,8 +681,7 @@
                                     <span
                                         class="text-gray-400 truncate bg-zate-800 px-3 py-1 rounded-md space-x-2">
                                         <i class="fa-solid fa-file"></i>
-                                        <span class="select-all"
-                                            style="font-family: monospace" data-id="path"></span>
+                                        <span class="select-all monospace" data-id="path"></span>
                                     </span>
                                 </div>
 
@@ -670,8 +689,8 @@
                                     <div
                                         class="text-gray-400 truncate bg-zate-800 px-3 py-1 rounded-md space-x-2">
                                         <i class="fa-solid fa-key"></i>
-                                        <div class="select-all text-orange-300 inline-flex" style="font-family: monospace;">
-                                            <span class="transition-all" data-id="value-censored"></span><span data-id="value-remainder"></span>
+                                        <div class="select-all text-orange-300 inline-flex monospace">
+                                            <span class="transition-all" data-id="value-censored" data-censored="true"></span><span data-id="value-remainder"></span>
                                         </div>
                                     </div>
                                 </div>
@@ -698,7 +717,7 @@
                                     Matches
                                 </h2>
 
-                                <div class="flex flex-wrap gap-2 text-sm text-gray-400 mt-2" style="font-family: monospace;" data-id="patterns">
+                                <div class="flex flex-wrap gap-2 text-sm text-gray-400 mt-2 monospace" data-id="patterns">
                                 </div>
                             </div>
 
@@ -717,7 +736,7 @@
                                     Context
                                 </h2>
 
-                                <div class="flex text-white mt-2" style="font-family: monospace;">
+                                <div class="flex text-white mt-2 monospace">
                                     <div class="grid" data-id="address-viewer">
                                     </div>
 
@@ -728,7 +747,7 @@
                                     </div>
                                 </div>
 
-                                <div class="flex text-white mt-2" style="font-family: monospace;">
+                                <div class="flex text-white mt-2 monospace">
                                     <textarea data-id="textarea-viewer" class="h-[10rem] resize-none shadow-inner block w-full rounded-md bg-zate-800 p-1 text-white border-transparent text-gray-500 border-2 focus:outline-none" readonly="true"></textarea>
                                 </div>
                             </div>
@@ -788,7 +807,7 @@
                             </div>
                         </div>
 
-                        <button class="flex-shrink-0 align-middle text-gray-500 hover:text-orange-500 transition-all" data-id="visibility-toggle">
+                        <button class="flex-shrink-0 align-middle text-gray-500 hover:text-orange-500 transition-all" data-id="censorship-button" data-role="toggle-censorship">
                             <i class="fa-solid fa-eye-slash"></i>
                         </button>
                     </div>
