@@ -1,0 +1,36 @@
+.monospace {
+    font-family: monospace;
+}
+
+.bg-zate-600 {
+    background-color: #42414D;
+}
+
+.bg-zate-700 {
+    background-color: #35343f;
+}
+
+.bg-zate-800 {
+    background-color: #2B2A33;
+}
+
+.border-zate-500 {
+    border-color: #646371;
+}
+
+.border-zate-600 {
+    border-color: #42414D;
+}
+
+.bg-zate-900 {
+    background-color: #1C1B22;
+}
+
+.hide-selection *::selection {
+    background-color: transparent;
+}
+
+::selection {
+    background-color: #3B82F6;
+    color: #FFFFFF;
+}

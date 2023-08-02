@@ -7,55 +7,19 @@
 
     <script src="scripts/utilities.js"></script>
     <script src="scripts/censorship.js"></script>
-    <script src="scripts/items.js"></script>
+    <script src="scripts/data.js"></script>
+    <script src="scripts/viewers.js"></script>
+    <script src="scripts/findings.js"></script>
 
     <script src="vendors/tailwind-3.3.3.js"></script>
-    <link rel="stylesheet" href="vendors/fontawesome-6.4.0/css/all.min.css" />
+    <link href="vendors/fontawesome-6.4.0/css/all.min.css" rel="stylesheet" type="text/css"/>
 
-    <style>
-        .monospace {
-            font-family: monospace;
-        }
-
-        .bg-zate-600 {
-            background-color: #42414D;
-        }
-
-        .bg-zate-700 {
-            background-color: #35343f;
-        }
-
-        .bg-zate-800 {
-            background-color: #2B2A33;
-        }
-
-        .border-zate-500 {
-            border-color: #646371;
-        }
-
-        .border-zate-600 {
-            border-color: #42414D;
-        }
-
-        .bg-zate-900 {
-            background-color: #1C1B22;
-        }
-
-        .hide-selection *::selection {
-            background-color: transparent;
-        }
-
-        ::selection {
-            background-color: #3B82F6;
-            color: #FFFFFF;
-        }
-    </style>
+    <link href="stylesheets/custom.css" rel="stylesheet" type="text/css"/>
 
     <style type="text/tailwindcss">
         @tailwind components;
 
         @layer components {
-
             .risk-tab--active {
                 @apply whitespace-nowrap py-2 px-3 text-sm font-medium text-white hover:text-orange-300 transition-all border-t-2 border-x-2 border-white rounded-t-md hover:border-orange-500;
             }
@@ -81,506 +45,6 @@
             }
         }
     </style>
-
-    <script>
-        'use strict';
-
-        function base64ToByteArray(base64) {
-            const binString = atob(base64);
-            return Uint8Array.from(binString, (character) => character.codePointAt(0));
-        }
-
-        // function bytesToBase64(bytes) {
-        //     const binString = Array.from(bytes, (x) => String.fromCodePoint(x)).join("");
-        //     return btoa(binString);
-        // }
-
-        function valueToHex(value, minBytes=1) {
-            /**
-             * This function converts the given value (presumably an integer) into a hex string.
-             **/
-            return value.toString(16).padStart(minBytes * 2, '0');
-        }
-
-        function hexToByteArray(hex) {
-            /**
-             * This function converts the given hex string into a byte array.
-             **/
-            return Uint8Array.from(hex.match(/[0-9A-Z]{2}/gi).map((chunk) => parseInt(chunk, 16)));
-        }
-
-        function valueToCharCode(value) {
-            /**
-             * This function converts the given integer into a character, but
-             * only if the integer can be represented with standard ASCII.
-             **/
-             if (value < 32 || value > 126) {
-                return '.';
-            }
-
-            return String.fromCharCode(value);
-        }
-
-        function byteArrayToString(byteArray, allowNewline=false) {
-            /**
-             * This function converts the given byte array into a string, but
-             * only if each byte can be represented with standard ASCII. Bytes
-             * that cannot be represented with standard ASCII are converted to
-             * "." characters.
-             **/
-            let string = '';
-
-            for (let index = 0; index < byteArray.length; index++) {
-                const value = byteArray[index];
-
-                if (allowNewline && value == 10) {
-                    string += '\n';
-                } else if (value < 32 || value > 126) {
-                    string += '.';
-                } else {
-                    string += String.fromCharCode(value);
-                }
-            }
-
-            return string;
-        }
-
-        function setupAddressViewer(container, byteArray, startPosition=0, rowSize=16) {
-            /**
-             * This function sets up our address viewer, with addressing relative to the start position.
-             **/
-            const addressViewer = container.querySelector('[data-id="address-viewer"]');
-            addressViewer.replaceChildren();
-
-            for (let index = 0; index < byteArray.length; index += rowSize) {
-                let addressElement = document.createElement('span');
-                addressElement.classList.add('bg-zate-800', 'px-2', 'select-all');
-                addressElement.innerText = valueToHex(startPosition + index, 4);
-
-                if (index === 0) {
-                    addressElement.classList.add('rounded-t-md');
-                }
-
-                if (index / rowSize === Math.floor(byteArray.length / rowSize)) {
-                    addressElement.classList.add('rounded-b-md');
-                }
-
-                addressViewer.appendChild(addressElement);
-            }
-        }
-
-        function setupHexViewer(container, byteArray, highlightStart=0, highlightEnd=0, rowSize=16) {
-            /**
-             * This function sets up the hex viewer based on the given byte array.
-             **/
-            const hexViewer = container.querySelector('[data-id="hex-viewer"]');
-            hexViewer.setAttribute('data-size', byteArray.length);
-            hexViewer.replaceChildren();
-
-            let hexRow = null;
-
-            for (let index = 0; index < byteArray.length; index++) {
-                const value = byteArray[index];
-
-                if (index % rowSize === 0) {
-                    if (hexRow !== null) {
-                        hexViewer.appendChild(hexRow);
-                    }
-
-                    hexRow = document.createElement('div');
-                }
-
-                let hexColumn = document.createElement('span');
-                hexColumn.setAttribute('data-index', index);
-                hexColumn.classList.add('px-1', 'border', 'border-transparent');
-                hexColumn.innerText = valueToHex(value);
-
-                if (highlightStart <= index && highlightEnd > index) {
-                    hexColumn.classList.add('bg-zate-800', 'text-orange-300');
-                    hexColumn.setAttribute('data-highlighted', true);
-                } else if (index % 2 === 0) { // if (value === 0) {
-                    // Originally, I was going to color this based on
-                    // whether the value was 0x00 or not. This looks terrible
-                    // in practice, however, as text data will be all white
-                    // due to the limited occurrence of the 0x00 character.
-                    // Human eyes prefer landmarks, so we instead artificially
-                    // color each column with this tint. We lose some visual
-                    // information but it's a compromise we need to make.
-                    hexColumn.classList.add('text-gray-400');
-                    hexColumn.setAttribute('data-tinted', true);
-                }
-
-                hexRow.appendChild(hexColumn);
-            }
-
-            hexViewer.appendChild(hexRow);
-        }
-
-        function setupTextViewer(container, byteArray, highlightStart=0, highlightEnd=0, rowSize=16) {
-            /**
-             * This function sets up the text viewer based on the given byte array.
-             **/
-            const textViewer = container.querySelector('[data-id="text-viewer"]');
-            textViewer.setAttribute('data-size', byteArray.length);
-            textViewer.replaceChildren();
-
-            let textRow = null;
-
-            for (let index = 0; index < byteArray.length; index++) {
-                const value = byteArray[index];
-
-                if (index % rowSize === 0) {
-                    if (textRow !== null) {
-                        textViewer.appendChild(textRow);
-                    }
-
-                    textRow = document.createElement('div');
-                }
-
-                let textColumn = document.createElement('span');
-                textColumn.setAttribute('data-index', index);
-                textColumn.classList.add('border', 'border-transparent');
-                textColumn.innerText = valueToCharCode(value);
-
-                if (highlightStart <= index && highlightEnd > index) {
-                    textColumn.classList.add('bg-zate-800', 'text-orange-300');
-                    textColumn.setAttribute('data-highlighted', true);
-                } else if (value < 32 || value > 126) {
-                    textColumn.classList.add('text-gray-400');
-                    textColumn.setAttribute('data-tinted', true);
-                }
-
-                textRow.appendChild(textColumn);
-            }
-
-            textViewer.appendChild(textRow);
-        }
-
-        function setupSelector(container) {
-            const hexViewer = container.querySelector('[data-id="hex-viewer"]');
-            const textViewer = container.querySelector('[data-id="text-viewer"]');
-
-            let selectedElements = [];
-            let backgroundStyledElements = [];
-            let borderStyledElements = [];
-
-            function copySelectionToClipboard(event) {
-                let textContent = '';
-
-                for (const element of selectedElements) {
-                    textContent += element.innerText;
-                }
-
-                event.clipboardData.setData('text/plain', textContent);
-                event.preventDefault();
-            }
-
-            hexViewer.addEventListener('copy', copySelectionToClipboard);
-            textViewer.addEventListener('copy', copySelectionToClipboard);
-
-            document.addEventListener('selectionchange', (event) => {
-                let selection = window.getSelection();
-                let shouldReturn = false;
-
-                // If there isn't a selection, we should return.
-                if (selection.isCollapsed) {
-                    shouldReturn = true;
-                }
-
-                let isSelectingHexViewer = hexViewer.contains(selection.anchorNode) && hexViewer.contains(selection.focusNode);
-                let isSelectingTextViewer = textViewer.contains(selection.anchorNode) && textViewer.contains(selection.focusNode);
-
-                if (!isSelectingHexViewer && !isSelectingTextViewer) {
-                    shouldReturn = true;
-                }
-
-                // If the anchor or focus element has changed, we reset our
-                // coloring. This is really just an optimization to keep the
-                // renderer from killing itself.
-                if (selectedElements.length > 0) {
-                    for (const element of backgroundStyledElements) {
-                        if (element.getAttribute('data-tinted') !== null) {
-                            element.classList.add('text-gray-400');
-                        } else if (element.getAttribute('data-super-tinted') !== null) {
-                            element.classList.add('text-gray-500');
-                        } else if (element.getAttribute('data-highlighted') !== null) {
-                            element.classList.add('bg-zate-800', 'text-orange-300');
-                        }
-
-                        element.classList.remove('bg-blue-500', 'text-white');
-                    }
-
-                    for (const element of borderStyledElements) {
-                        element.classList.add('border-transparent');
-                        element.classList.remove('border-y-blue-500', 'border-l-blue-500', 'border-r-blue-500');
-                    }
-
-                    selectedElements = [];
-                    backgroundStyledElements = [];
-                    borderStyledElements = [];
-                }
-
-                // If any of the above conditions have failed, we stop before
-                // coloring the selection.
-                if (shouldReturn) {
-                    if (hexViewer.classList.contains('hide-selection')) {
-                        hexViewer.classList.remove('hide-selection');
-                    }
-
-                    if (textViewer.classList.contains('hide-selection')) {
-                        textViewer.classList.remove('hide-selection');
-                    }
-
-                    return;
-                }
-
-                // We can start coloring things now!
-                hexViewer.classList.add('hide-selection');
-                textViewer.classList.add('hide-selection');
-
-                let startElement = null;
-                let endElement = null;
-
-                for (let index = 0; index < parseInt(hexViewer.getAttribute('data-size'), 10); index++) {
-                    const hexElement = hexViewer.querySelector(`[data-index="${index}"]`);
-                    const textElement = textViewer.querySelector(`[data-index="${index}"]`);
-                    let containsElement = (isSelectingHexViewer && selection.containsNode(hexElement, true)) || (isSelectingTextViewer && selection.containsNode(textElement, true));
-
-                    // Depending on which viewer is active, we set convenience variables for each element.
-                    const selectedElement = isSelectingHexViewer ? hexElement : textElement;
-                    const mirroredElement = isSelectingHexViewer ? textElement : hexElement;
-
-                    if (!containsElement) {
-                        if (startElement !== null) {
-                            break;
-                        } else {
-                            continue;
-                        }
-                    }
-
-                    if (startElement === null) {
-                        startElement = selectedElement;
-                    }
-
-                    endElement = selectedElement;
-
-                    selectedElements.push(selectedElement);
-                    backgroundStyledElements.push(selectedElement);
-                    borderStyledElements.push(mirroredElement);
-                }
-
-                for (let index = 0; index < selectedElements.length; index++) {
-                    const backgroundElement = backgroundStyledElements[index];
-                    const borderElement = borderStyledElements[index];
-
-                    backgroundElement.classList.add('bg-blue-500', 'text-white');
-
-                    if (backgroundElement.getAttribute('data-tinted') !== null) {
-                        backgroundElement.classList.remove('text-gray-400');
-                    } else if (backgroundElement.getAttribute('data-super-tinted') !== null) {
-                        backgroundElement.classList.remove('text-gray-500');
-                    } else if (backgroundElement.getAttribute('data-highlighted') !== null) {
-                        backgroundElement.classList.remove('bg-zate-800', 'text-orange-300');
-                    }
-
-                    borderElement.classList.add('border-y-blue-500');
-
-                    if (borderElement.getAttribute('data-index') === startElement.getAttribute('data-index')) {
-                        borderElement.classList.add('border-l-blue-500');
-                    }
-
-                    if (borderElement.getAttribute('data-index') === endElement.getAttribute('data-index')) {
-                        borderElement.classList.add('border-r-blue-500');
-                    }
-                }
-            });
-        }
-
-        function setupContext(container, byteArray, startPosition=0, highlightStart=0, highlightEnd=0, rowSize=16) {
-            /**
-             * This function sets up our context panel for the given container.
-             **/
-
-            setupAddressViewer(container, byteArray, startPosition, rowSize);
-            setupHexViewer(container, byteArray, highlightStart, highlightEnd, rowSize);
-            setupTextViewer(container, byteArray, highlightStart, highlightEnd, rowSize);
-            setupSelector(container);
-
-            container.querySelector('[data-id="textarea-viewer"]').value = byteArrayToString(byteArray, true);
-        }
-
-        function createFinding(path, valueBase64, pattern, name, description, indicators, rating, contextBase64, contextStart=0, highlightStart=0, highlightEnd=0, rowSize=16) {
-            const findingTemplate = document.querySelector('[data-id="finding-template"]');
-            const finding = findingTemplate.content.firstElementChild.cloneNode(true);
-
-            const valueByteArray = base64ToByteArray(valueBase64);
-            const value = byteArrayToString(valueByteArray);
-
-            // We start by setting some of the easy properties up.
-            finding.querySelector('[data-id="name"]').innerText = name;
-            finding.querySelector('[data-id="path"]').innerText = path;
-
-            let endingSlice = value.length > 12 ? 4 : 2;
-            finding.querySelector('[data-id="value-censored"]').innerText = value.slice(0, value.length - endingSlice);
-            finding.querySelector('[data-id="value-remainder"]').innerText = value.slice(-endingSlice);
-
-            const descriptionContainer = finding.querySelector('[data-id="descriptions"]');
-
-            for (let index = 0; index < description.length; index++) {
-                const paragraph = document.createElement('p');
-                paragraph.innerText = description[index];
-                descriptionContainer.appendChild(paragraph);
-                // finding.querySelector('[data-id="description"]').innerText = description;
-            }
-
-
-            // Now we can start creating more of the complex properties.
-            const ratingContainer = finding.querySelector('[data-id="rating"]');
-            const stars = 5;
-
-            for (let index = 0; index < stars; index++) {
-                const star = document.createElement('i');
-                star.classList.add('fa-solid', 'fa-star');
-                ratingContainer.appendChild(star);
-
-                if ((index + 1) / (stars + 1) <= rating) {
-                    star.classList.add('text-orange-500');
-                }
-            }
-
-            const tagTemplate = document.querySelector('[data-id="finding-tag-template"]');
-            const patternContainer = finding.querySelector('[data-id="patterns"]');
-
-            const patternElement = tagTemplate.content.firstElementChild.cloneNode(true);
-            const patternIcon = patternElement.querySelector('i');
-            const patternSpan = patternElement.querySelector('span');
-            patternIcon.classList.add('fa-percent');
-            patternSpan.innerText = pattern;
-            patternContainer.appendChild(patternElement);
-
-            const indicatorContainer = finding.querySelector('[data-id="indicators"]');
-
-            for (const [reason, delta] of indicators) {
-                const indicator = tagTemplate.content.firstElementChild.cloneNode(true);
-                const icon = indicator.querySelector('i');
-                const span = indicator.querySelector('span');
-                span.innerText = reason;
-
-                if (delta > 0) {
-                    icon.classList.add('fa-plus');
-                } else {
-                    icon.classList.add('fa-minus');
-                }
-
-                indicatorContainer.appendChild(indicator);
-            }
-
-            const contextPanel = finding.querySelector('[data-id="context-panel"]');
-            const contextByteArray = base64ToByteArray(contextBase64);
-
-            setupContext(contextPanel, contextByteArray, contextStart, highlightStart, highlightEnd, rowSize);
-
-            document.querySelector('[data-id="finding-container"]').appendChild(finding);
-        }
-
-        window.addEventListener('DOMContentLoaded', (event) => {
-            for (let index = 0; index < window.manifest.items.length; index++) {
-                const item = window.manifest.items[index];
-
-                // TODO: Automatically adjust the available columns.
-
-                createFinding(
-                    item.fileName,
-                    item.capture,
-                    item.pattern,
-                    item.patternName,
-                    window.manifest.descriptions[item.patternName],
-                    item.indicators,
-                    0.5,
-                    item.context,
-                    item.contextStart,
-                    (item.captureStart - item.contextStart),
-                    (item.captureEnd - item.contextStart),
-                    24
-                )
-
-                if (index >= 16) {
-                    break;
-                }
-            }
-        });
-    </script>
-
-    <script>
-        function setupViewDetailsButtons() {
-            const viewDetailsButtons = document.querySelectorAll('[data-id="view-details-button"]');
-
-            for (const button of viewDetailsButtons) {
-                const icon = button.querySelector('i');
-                const container = button.parentElement.parentElement.parentElement;
-                const details = container.querySelector('[data-id="details"]');
-
-                button.addEventListener('click', (event) => {
-                    event.preventDefault();
-
-                    if (details.getAttribute('data-expanded') === null) {
-                        details.setAttribute('data-expanded', true);
-
-                        icon.classList.add('fa-minus');
-                        icon.classList.remove('fa-plus');
-                        details.classList.remove('hidden');
-                        details.style.setProperty('height', '0px');
-
-                        const callback = (event) => {
-                            details.removeEventListener('transitionend', callback);
-                            details.style.removeProperty('height');
-                            details.classList.remove('hidden');
-                        };
-
-                        details.addEventListener('transitionend', callback);
-
-                        // We give it one animation frame before continuing on.
-                        // We wait for two frames, just to be safe for processing.
-                        requestAnimationFrame(() => {
-                            requestAnimationFrame(() => {
-                                details.style.setProperty('height', `${details.scrollHeight}px`);
-                            });
-                        });
-                    } else {
-                        details.removeAttribute('data-expanded');
-
-                        icon.classList.add('fa-plus');
-                        icon.classList.remove('fa-minus');
-                        details.classList.remove('hidden');
-                        details.style.setProperty('height', `${details.scrollHeight}px`);
-
-                        const callback = (event) => {
-                            details.removeEventListener('transitionend', callback);
-                            details.classList.add('hidden');
-                            details.style.removeProperty('height');
-                        };
-
-                        details.addEventListener('transitionend', callback);
-
-                        // We give it one animation frame before continuing on.
-                        // If we don't request two frames here, FireFox will break.
-                        // This issue is probably caused by where our callback falls
-                        // in the list; some items which are key for this to work
-                        // have not been called on our first frame.
-                        requestAnimationFrame(() => {
-                            requestAnimationFrame(() => {
-                                details.style.setProperty('height', '0px');
-                            });
-                        });
-                    }
-                });
-            }
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            setupViewDetailsButtons();
-        });
-    </script>
 
     <!-- This script sets up our censorship functionality. -->
     <script>
@@ -617,7 +81,7 @@
             const filters = document.querySelector('[data-id="filters"]');
 
             searchBox.addEventListener('keyup', (event) => {
-                if (event.key !== "Enter") {
+                if (event.key !== 'Enter') {
                     return;
                 }
 
@@ -639,6 +103,68 @@
 
 <body class="h-full bg-zate-600">
 
+    <template data-id="finding-details-template">
+
+        <div data-role="details-container" class="mx-4 mb-4 space-y-4 hidden transition-all duration-500 overflow-hidden">
+            <hr class="border-zate-600"/>
+
+            <div>
+                <h2 class="font-semibold truncate mb-0 text-white w-full">
+                    Description
+                </h2>
+
+                <div data-role="description-container" class="text-gray-400 mt-2 space-y-2">
+                </div>
+            </div>
+
+            <div>
+                <h2 class="font-semibold truncate mb-0 text-white">
+                    Matches
+                </h2>
+
+                <div data-role="pattern-container" class="flex flex-wrap gap-2 text-sm text-gray-400 mt-2 monospace">
+                </div>
+            </div>
+
+            <div>
+                <h2 class="font-semibold truncate mb-0 text-white">
+                    Indicators
+                </h2>
+
+                <div data-role="indicator-container" class="flex flex-wrap gap-2 text-sm font-bold text-gray-400 mt-2">
+                </div>
+            </div>
+
+
+            <div>
+                <h2 class="font-semibold truncate mb-0 text-white">
+                    Context
+                </h2>
+
+                <div class="flex text-white mt-2 monospace">
+                    <div data-role="address-viewer" class="grid">
+                    </div>
+
+                    <div data-role="hex-viewer" class="ml-4">
+                    </div>
+
+                    <div data-role="text-viewer" class="ml-8 whitespace-pre">
+                    </div>
+                </div>
+
+                <!--
+                    TODO: Eventually, it may not be a bad idea to rip this out
+                    of the textarea element; then we can highlight exactly
+                    which portion of text is the match.
+                -->
+                <div class="flex text-white mt-2 monospace">
+                    <textarea data-role="render-viewer" readonly="true" class="h-[10rem] resize-none shadow-inner block w-full rounded-md bg-zate-800 p-1 text-white border-transparent text-gray-500 border-2 focus:outline-none"></textarea>
+                </div>
+            </div>
+        </div>
+
+    </template>
+
     <template data-id="finding-tag-template">
 
         <div class="bg-zate-800 px-3 py-1 rounded-md truncate space-x-2">
@@ -650,108 +176,57 @@
 
     <template data-id="filter-template">
 
-        <button class="bg-zate-800 px-3 py-1 rounded-md truncate space-x-2 hover:text-orange-500 transition-all" data-id="remove-filter">
+        <button data-role="remove-filter-button" class="bg-zate-800 px-3 py-1 rounded-md truncate space-x-2 hover:text-orange-500 transition-all">
             <i class="fa-solid fa-xmark"></i>
             <span class="text-gray-400"></span>
         </button>
 
     </template>
 
-    <!-- This is the template for each finding. -->
     <template data-id="finding-template">
 
         <div class="bg-zate-700 p-1 rounded-md shadow-inner">
             <div class="flex items-center px-4 py-4 sm:px-0 h-full">
                 <div class="flex min-w-0 flex-1 items-center">
-                    <div class="w-full px-3 space-y-4">
+                    <div data-role="finding-container" class="w-full px-3 space-y-4">
 
+                        <!-- This is the row element which is shown by default. -->
                         <div class="min-w-0 relative flex-auto text-white">
-                            <h2 class="font-semibold truncate sm:pr-20 mb-0" data-id="name"></h2>
-                            <div class="flex flex-wrap text-sm leading-6 font-medium space-y-2">
-                                <div
-                                    class="hidden absolute top-0 right-0 sm:flex items-center space-x-1 bg-zate-800 text-gray-500 px-3 py-2 rounded-md font-bold" data-id="rating">
+                            <!-- This is the header used to store the finding's name. -->
+                            <h2 data-content="name" class="font-semibold truncate sm:pr-20 mb-0"></h2>
+
+                            <div class="flex flex-wrap text-sm leading-6 space-y-2">
+                                <!-- This is the tag used to store the finding's rating. -->
+                                <div data-content="rating" class="absolute top-0 right-0 sm:flex items-center space-x-1 bg-zate-800 text-gray-500 px-3 py-2 rounded-md">
                                 </div>
 
-                                <button data-id="view-details-button"
-                                    class="absolute px-6 py-1 bottom-0 right-0 items-center border-2 border-gray-500 rounded-md font-bold text-gray-500 hover:text-orange-500 hover:border-orange-500 transition-all">
+                                <!-- This is the button which toggles the finding's details panel. -->
+                                <button data-role="view-details-button" class="absolute px-6 py-1 bottom-0 right-0 items-center border-2 border-gray-500 rounded-md text-gray-500 hover:text-orange-500 hover:border-orange-500 transition-all">
                                     <i class="fa-solid fa-plus"></i>
                                 </button>
 
-                                <div class="flex w-full font-normal">
-                                    <span
-                                        class="text-gray-400 truncate bg-zate-800 px-3 py-1 rounded-md space-x-2">
+                                <!-- This is the tag used to store the finding's file path. -->
+                                <div class="flex w-full">
+                                    <span class="text-gray-400 truncate bg-zate-800 px-3 py-1 rounded-md space-x-2">
                                         <i class="fa-solid fa-file"></i>
-                                        <span class="select-all monospace" data-id="path"></span>
+                                        <span data-content="file-name" class="select-all monospace"></span>
                                     </span>
                                 </div>
 
-                                <div class="flex w-full font-normal">
-                                    <div
-                                        class="text-gray-400 truncate bg-zate-800 px-3 py-1 rounded-md space-x-2">
+                                <!-- This is the tag used to store the finding's value. -->
+                                <div class="flex w-full">
+                                    <div class="text-gray-400 truncate bg-zate-800 px-3 py-1 rounded-md space-x-2">
                                         <i class="fa-solid fa-key"></i>
                                         <div class="select-all text-orange-300 inline-flex monospace">
-                                            <span class="transition-all" data-id="value-censored" data-censored="true"></span><span data-id="value-remainder"></span>
+                                            <span data-content="value-censored" data-censored="true" class="transition-all"></span>
+                                            <span data-content="value-leftover"></span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="space-y-4 hidden transition-all duration-500 overflow-hidden" data-id="details">
-                            <hr class="border-zate-600" />
-
-                            <div data-id="description-panel">
-                                <h2 class="font-semibold truncate mb-0 text-white w-full">
-                                    <!-- <button class="mr-2 items-center text-gray-500 hover:text-orange-500 transition-all">
-                                        <i class="fa-solid fa-minus"></i>
-                                    </button> -->
-                                    Description
-                                </h2>
-
-                                <div class="text-gray-400 mt-2 space-y-2" data-id="descriptions">
-                                </div>
-                            </div>
-
-                            <div data-id="pattern-panel">
-                                <h2 class="font-semibold truncate sm:pr-20 mb-0 text-white">
-                                    Matches
-                                </h2>
-
-                                <div class="flex flex-wrap gap-2 text-sm text-gray-400 mt-2 monospace" data-id="patterns">
-                                </div>
-                            </div>
-
-                            <div data-id="indicator-panel">
-                                <h2 class="font-semibold truncate sm:pr-20 mb-0 text-white">
-                                    Indicators
-                                </h2>
-
-                                <div class="flex flex-wrap gap-2 text-sm font-bold text-gray-400 mt-2" data-id="indicators">
-                                </div>
-                            </div>
-
-
-                            <div data-id="context-panel">
-                                <h2 class="font-semibold truncate sm:pr-20 mb-0 text-white">
-                                    Context
-                                </h2>
-
-                                <div class="flex text-white mt-2 monospace">
-                                    <div class="grid" data-id="address-viewer">
-                                    </div>
-
-                                    <div class="ml-4" data-id="hex-viewer">
-                                    </div>
-
-                                    <div class="ml-8 whitespace-pre" data-id="text-viewer">
-                                    </div>
-                                </div>
-
-                                <div class="flex text-white mt-2 monospace">
-                                    <textarea data-id="textarea-viewer" class="h-[10rem] resize-none shadow-inner block w-full rounded-md bg-zate-800 p-1 text-white border-transparent text-gray-500 border-2 focus:outline-none" readonly="true"></textarea>
-                                </div>
-                            </div>
-                        </div>
+                        <!-- Each finding's details will be appended down here once it's expanded. -->
                     </div>
                 </div>
             </div>
@@ -759,14 +234,14 @@
 
     </template>
 
-
+    <!-- THIS TEMPLATE NEEDS TO BE UPDATED. -->
     <template data-id="inactive-page-button--template">
 
         <button class="inline-flex items-center px-4 pt-4 text-sm font-medium text-white hover:text-gray-200">2</button>
 
     </template>
 
-
+    <!-- THIS TEMPLATE NEEDS TO BE UPDATED. -->
     <template data-id="active-page-button--template">
 
         <button class="inline-flex items-center px-4 pt-4 text-sm font-medium text-white">1</button>
@@ -778,7 +253,7 @@
         <!-- Navbar -->
         <nav class="bg-zate-800">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <div class="relative flex h-16 items-center justify-between"> <!--   border-b border-gray-200 -->
+                <div class="relative flex h-16 items-center justify-between">
                     <div class="flex items-center">
                         <div class="flex-shrink-0">
                             <i class="fa-solid fa-dragon text-xl text-orange-500"></i>
@@ -888,7 +363,7 @@
                         <div class="flex flex-wrap gap-2 text-sm font-bold text-gray-400" data-id="filters">
                         </div>
 
-                        <hr class="border-zate-500 my-4" />
+                        <hr class="border-zate-500 my-4"/>
                     </div>
 
 
@@ -931,7 +406,6 @@
             </div>
         </main>
     </div>
-
 
 </body>
 
