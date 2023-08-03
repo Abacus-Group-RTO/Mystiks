@@ -238,6 +238,6 @@ function refreshFindings(findings, descriptions) {
     }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-    refreshFindings(window.manifest.findings, window.manifest.descriptions);
-});
+window.findings = {
+    refreshFindings
+}

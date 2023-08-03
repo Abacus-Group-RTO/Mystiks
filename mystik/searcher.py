@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-from .mystik_core import recursive_regex_search
 from base64 import standard_b64decode
+from time import time
+from math import ceil
+
+from .mystik_core import recursive_regex_search
 
 
 def build_manifest(path, target_findings):
+    started_at = ceil(time())
+    unique_files = []
     patterns = []
     mappings = {}
 
@@ -17,7 +22,8 @@ def build_manifest(path, target_findings):
 
     manifest = {
         'findings': {},
-        'descriptions': {}
+        'descriptions': {},
+        'metadata': {}
     }
 
     for match in matches:
@@ -35,12 +41,11 @@ def build_manifest(path, target_findings):
 
         value = sum([delta for _, delta in indicators]) / len(indicators)
 
-        if 'AWS' in match.pattern_name:
-            print(indicators)
-            print(value)
-
         if value < 0:
             continue
+
+        if match.file_name not in unique_files:
+            unique_files.append(match.file_name)
 
         manifest['findings'][match.uuid] = {
             'fileName': match.file_name,
@@ -58,5 +63,9 @@ def build_manifest(path, target_findings):
 
         if not finding.name in manifest['descriptions']:
             manifest['descriptions'][finding.name] = finding.description
+
+        manifest['metadata']['started_at'] = started_at
+        manifest['metadata']['completed_at'] = ceil(time())
+        manifest['metadata']['unique_files'] = len(unique_files)
 
     return manifest

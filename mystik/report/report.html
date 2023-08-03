@@ -99,6 +99,12 @@
         });
     </script>
 
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            findings.refreshFindings(window.manifest.findings, window.manifest.descriptions);
+        });
+    </script>
+
 </head>
 
 <body class="h-full bg-zate-600">

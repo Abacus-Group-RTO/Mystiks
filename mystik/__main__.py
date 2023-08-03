@@ -10,7 +10,7 @@ from re import split
 from jinja2 import Template
 
 from .findings.jwt import JSONWebToken
-from .findings.amazon import AmazonToken
+from .findings.amazon import AmazonAccessKeyID
 from .searcher import build_manifest
 
 
@@ -32,7 +32,7 @@ def main():
         exit()
 
     started_at = time()
-    manifest = build_manifest(target_path, [AmazonToken, JSONWebToken])
+    manifest = build_manifest(target_path, [AmazonAccessKeyID, JSONWebToken])
 
     with open('data.js', 'w') as file:
         file.write('window.manifest = ' + to_json(manifest, indent=' ' * 4))
