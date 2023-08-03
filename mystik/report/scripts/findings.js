@@ -103,7 +103,9 @@ function createFinding(uuid, fileName, valueBase64, patterns, name, descriptions
     let rating = 0;
 
     for (const [reason, delta] of indicators) {
-        rating += delta;
+        if (delta > 0) {
+            rating += delta;
+        }
     }
 
     const ratingContainer = finding.querySelector('[data-content="rating"]');
@@ -208,7 +210,7 @@ function refreshFindings(findings, descriptions) {
      * This function refreshes the finding list (this should be called on page
      * changes or filter changes).
      */
-    const findingCount = findings.length;
+    const findingCount = Object.keys(findings).length;
     const pageSize = utilities.getIntegerParameter('pageSize', 16, 16, 32);
     const pageIndex = utilities.getIntegerParameter('pageIndex', 0, 0, Math.floor(findingCount / pageSize));
 
@@ -237,5 +239,5 @@ function refreshFindings(findings, descriptions) {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-    refreshFindings(window.manifest.items, window.manifest.descriptions);
+    refreshFindings(window.manifest.findings, window.manifest.descriptions);
 });

@@ -9,43 +9,9 @@ from json import dumps as to_json
 from re import split
 from jinja2 import Template
 
-from . import DEFAULT_SECRETS
-from .mystik_core import recursive_regex_search
-
-
-def items_to_json(items):
-    output = {}
-
-    for item in items:
-        output[item.uuid] = {
-            'fileName': item.file_name,
-            'context': item.context,
-            'contextStart': item.context_start,
-            'contextEnd': item.context_end,
-            'capture': item.capture,
-            'pattern': item.pattern,
-            'patternName': item.pattern_name,
-            'captureStart': item.capture_start,
-            'captureEnd': item.capture_end,
-            'indicators': [('Matched pattern', 1)]
-        }
-
-    return output
-
-
-def items_to_javascript(items):
-    items = items_to_json(items)
-    manifest = to_json({
-        'items': items,
-        'descriptions': {
-            'Generic Access': [
-                'Permissions in the Android Manifest file define the types of operations and data the application can access on the user\'s device. There are different categories of permissions depending on the potential risk to user privacy, divided mainly into Normal, Dangerous, Signature, and Special permissions.',
-                'Normal permissions cover areas where your app needs to access data or resources outside the app\'s sandbox but pose minimal risk to the user\'s privacy. For example, an app might need to access the internet or set the time zone.',
-                'Dangerous permissions, on the other hand, could potentially involve the user\'s private data or affect the operation of other apps or the system. This includes permissions like reading or writing to the user\'s contacts, accessing precise location, reading SMS messages, etc. For such permissions, the app must explicitly request the user\'s approval at runtime.',
-            ]
-        }
-    }) #, indent=' ' * 4)
-    return 'window.manifest = ' + manifest
+from .findings.jwt import JSONWebToken
+from .findings.amazon import AmazonToken
+from .searcher import build_manifest
 
 
 def main():
@@ -66,10 +32,10 @@ def main():
         exit()
 
     started_at = time()
-    items = recursive_regex_search(str(target_path), [('Generic Access', 'ACCESS[_A-Z]+')])
+    manifest = build_manifest(target_path, [AmazonToken, JSONWebToken])
 
-    with open('items.js', 'w') as file:
-        file.write(items_to_javascript(items))
+    with open('data.js', 'w') as file:
+        file.write('window.manifest = ' + to_json(manifest, indent=' ' * 4))
 
     print(f'{time() - started_at:.2f} seconds')
 

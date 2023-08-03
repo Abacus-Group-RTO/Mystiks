@@ -23,6 +23,8 @@ struct Match {
     #[pyo3(get, set)]
     pattern_name: String,
     #[pyo3(get, set)]
+    groups: Vec<String>,
+    #[pyo3(get, set)]
     capture: String,
     #[pyo3(get, set)]
     capture_start: usize,
@@ -73,17 +75,28 @@ fn recursive_regex_search(path: &str, patterns: Vec<(String, &str)>) -> PyResult
             file.read_to_end(&mut contents).unwrap();
 
             for (pattern_name, pattern) in regex_patterns {
-                for match_obj in pattern.find_iter(&contents) {
+                for capture in pattern.captures_iter(&contents) {
+                    let full_match = capture.get(0).unwrap();
+
                     let mut context_start = 0;
 
-                    if match_obj.start() > 128 {
-                        context_start = match_obj.start() - 128;
+                    if full_match.start() > 128 {
+                        context_start = full_match.start() - 128;
                     }
 
                     let mut context_end = contents.len();
 
-                    if context_end > match_obj.end() + 128 {
-                        context_end = match_obj.end() + 128;
+                    if context_end > full_match.end() + 128 {
+                        context_end = full_match.end() + 128;
+                    }
+
+                    let mut groups: Vec<String> = Vec::new();
+
+                    if capture.len() > 1 {
+                        for index in 1..capture.len() {
+                            let group = capture.get(index).unwrap();
+                            groups.push(general_purpose::STANDARD.encode(&contents[group.start()..group.end()]));
+                        }
                     }
 
                     tx.lock().unwrap().send(Match {
@@ -91,9 +104,10 @@ fn recursive_regex_search(path: &str, patterns: Vec<(String, &str)>) -> PyResult
                         file_name: path.display().to_string(),
                         pattern: pattern.as_str().to_string(),
                         pattern_name: pattern_name.clone(),
-                        capture_start: match_obj.start(),
-                        capture_end: match_obj.end(),
-                        capture: general_purpose::STANDARD.encode(&contents[match_obj.start()..match_obj.end()]),
+                        groups: groups,
+                        capture: general_purpose::STANDARD.encode(&contents[full_match.start()..full_match.end()]),
+                        capture_start: full_match.start(),
+                        capture_end: full_match.end(),
                         context: general_purpose::STANDARD.encode(&contents[context_start..context_end]),
                         context_start: context_start,
                         context_end: context_end,

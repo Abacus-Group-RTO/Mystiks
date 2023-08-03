@@ -207,7 +207,7 @@
 
                                 <!-- This is the tag used to store the finding's file path. -->
                                 <div class="flex w-full">
-                                    <span class="text-gray-400 truncate bg-zate-800 px-3 py-1 rounded-md space-x-2">
+                                    <span class="text-gray-400 truncate bg-zate-800 px-3 py-1 rounded-md space-x-2 max-w-[75%]">
                                         <i class="fa-solid fa-file"></i>
                                         <span data-content="file-name" class="select-all monospace"></span>
                                     </span>
@@ -215,7 +215,7 @@
 
                                 <!-- This is the tag used to store the finding's value. -->
                                 <div class="flex w-full">
-                                    <div class="text-gray-400 truncate bg-zate-800 px-3 py-1 rounded-md space-x-2">
+                                    <div class="text-gray-400 truncate bg-zate-800 px-3 py-1 rounded-md space-x-2 max-w-[75%]">
                                         <i class="fa-solid fa-key"></i>
                                         <div class="select-all text-orange-300 inline-flex monospace">
                                             <span data-content="value-censored" data-censored="true" class="transition-all"></span>
@@ -394,13 +394,7 @@
 
                 <div data-id="page--graphs" class="hidden">
                     <div class="divide-y divide-dashed pb-16">
-                        {% for title, chart in charts.items() %}
-                        <div class="pt-8">
-                            <h2 class="text-lg font-medium text-white">{{ title }}</h2>
-
-                            {{ chart.to_html(include_plotlyjs=False, full_html=False) }}
-                        </div>
-                        {% endfor %}
+                        <!-- TODO: At some point... -->
                     </div>
                 </div>
             </div>
