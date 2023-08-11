@@ -8,7 +8,7 @@ function setupDescription(rootContainer, descriptions) {
 
     for (const description of descriptions) {
         const paragraph = document.createElement('p');
-        paragraph.innerText = description;
+        paragraph.textContent = description;
         container.appendChild(paragraph);
     }
 }
@@ -23,7 +23,7 @@ function setupPatterns(rootContainer, patterns) {
     for (const pattern of patterns) {
         const patternTag = template.content.firstElementChild.cloneNode(true);
         patternTag.querySelector('i').classList.add('fa-percent');
-        patternTag.querySelector('span').innerText = pattern;
+        patternTag.querySelector('span').textContent = pattern;
         container.appendChild(patternTag);
     }
 }
@@ -37,7 +37,7 @@ function setupIndicators(rootContainer, indicators) {
 
     for (const [reason, delta] of indicators) {
         const indicatorTag = template.content.firstElementChild.cloneNode(true);
-        indicatorTag.querySelector('span').innerText = reason;
+        indicatorTag.querySelector('span').textContent = reason;
         const icon = indicatorTag.querySelector('i');
 
         if (delta > 0) {
@@ -87,8 +87,8 @@ function createFinding(uuid, fileName, valueBase64, patterns, name, descriptions
     finding.setAttribute('data-id', uuid);
 
     // We start by setting some of the easy properties up.
-    finding.querySelector('[data-content="name"]').innerText = name;
-    finding.querySelector('[data-content="file-name"]').innerText = fileName;
+    finding.querySelector('[data-content="name"]').textContent = name;
+    finding.querySelector('[data-content="file-name"]').textContent = fileName;
 
     // Then we convert the value into a best-guess string.
     const valueByteArray = utilities.base64ToByteArray(valueBase64);
@@ -96,8 +96,19 @@ function createFinding(uuid, fileName, valueBase64, patterns, name, descriptions
 
     // We determine how much of the value to make censored.
     let valueSlice = Math.max(2, Math.floor(value.length / 4));
-    finding.querySelector('[data-content="value-censored"]').innerText = value.slice(0, value.length - valueSlice);
-    finding.querySelector('[data-content="value-leftover"]').innerText = value.slice(-valueSlice);
+
+    const valueCensored = finding.querySelector('[data-content="value-censored"]');
+    const valueLeftover = finding.querySelector('[data-content="value-leftover"]');
+
+    valueCensored.textContent = value.slice(0, value.length - valueSlice);
+    valueLeftover.textContent = value.slice(-valueSlice);
+
+    // To prevent any HTML indentation from being copied through the selection,
+    // we manually copy the value's data to the clipboard.
+    finding.querySelector('[data-content="value"]').addEventListener('copy', (event) => {
+        event.preventDefault();
+        event.clipboardData.setData('text/plain', valueCensored.textContent + valueLeftover.textContent);
+    });
 
     // We also setup the ratings based on their indicators.
     let rating = 0;
@@ -205,20 +216,23 @@ function createFinding(uuid, fileName, valueBase64, patterns, name, descriptions
     document.querySelector('[data-id="finding-container"]').appendChild(finding);
 }
 
-function refreshFindings(findings, descriptions) {
+function refreshFindings(findings, descriptions, sorting) {
     /**
      * This function refreshes the finding list (this should be called on page
      * changes or filter changes).
      */
+    document.querySelector('[data-id="finding-container"]').replaceChildren();
+
     const findingCount = Object.keys(findings).length;
-    const pageSize = utilities.getIntegerParameter('pageSize', 16, 16, 32);
-    const pageIndex = utilities.getIntegerParameter('pageIndex', 0, 0, Math.floor(findingCount / pageSize));
+    const pageSize = utilities.getIntegerParameter('pageSize', 8, 8, 16);
+    const totalPages = Math.floor(findingCount / pageSize);
+    const pageIndex = utilities.getIntegerParameter('pageIndex', 0, 0, totalPages);
 
     const startIndex = pageIndex * pageSize;
     const stopIndex = Math.min(findingCount, startIndex + pageSize);
 
     for (let index = startIndex; index < stopIndex; index++) {
-        const uuid = Object.keys(findings)[index];
+        const uuid = sorting[index];
         const finding = findings[uuid];
 
         createFinding(
@@ -236,6 +250,35 @@ function refreshFindings(findings, descriptions) {
             24
         )
     }
+
+    const buttonStartIndex = Math.max(pageIndex - 3, 0);
+    const buttonStopIndex = Math.min(pageIndex + 3, totalPages);
+    const buttonTemplate = document.querySelector('[data-id="page-button-template"]');
+    const buttonContainer = document.querySelector('[data-id="page-button-container"]');
+    buttonContainer.replaceChildren();
+
+    for (let index = buttonStartIndex; index < buttonStopIndex; index++) {
+        const button = buttonTemplate.content.firstElementChild.cloneNode(true);
+        button.textContent = index + 1;
+
+        if (index === pageIndex) {
+            // button.classList.add('text-white', 'border-white', 'border-b-2', 'border-x-2');
+            // button.classList.remove('text-gray-400', 'border-2', 'border-gray-400');
+            button.classList.add('text-white', 'border-white');
+            button.classList.remove('text-gray-400', 'border-gray-400');
+        } else {
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+
+                utilities.setParameter('pageIndex', index);
+                refreshFindings(findings, descriptions, sorting);
+            });
+        }
+
+        buttonContainer.appendChild(button);
+    }
+
+    censorship.refreshCensorship();
 }
 
 window.findings = {

@@ -21,11 +21,11 @@
 
         @layer components {
             .risk-tab--active {
-                @apply whitespace-nowrap py-2 px-3 text-sm font-medium text-white hover:text-orange-300 transition-all border-t-2 border-x-2 border-white rounded-t-md hover:border-orange-500;
+                @apply whitespace-nowrap py-2 px-3 text-sm font-medium text-white hover:text-orange-300 transition-all border-2 border-white rounded-t-md hover:border-orange-500;
             }
 
             .risk-tab--inactive {
-                @apply whitespace-nowrap py-2 px-3 text-sm font-medium text-gray-400 hover:text-orange-300 transition-all border-2 border-x-2 border-gray-500 rounded-t-md hover:border-orange-500;
+                @apply whitespace-nowrap py-2 px-3 text-sm font-medium text-gray-400 hover:text-orange-300 transition-all border-2 border-gray-500 rounded-t-md hover:border-orange-500;
             }
 
             .risk-tab-counter--active {
@@ -37,7 +37,7 @@
             }
 
             .page-tab--active {
-                @apply rounded-t-md px-3 py-2 text-sm font-medium text-white border-t-2 border-x-2 border-white hover:border-orange-500 hover:text-orange-300 transition-all;
+                @apply rounded-t-md px-3 py-2 text-sm font-medium text-white border-2 border-white hover:border-orange-500 hover:text-orange-300 transition-all;
             }
 
             .page-tab--inactive {
@@ -86,7 +86,7 @@
                 }
 
                 const filterElement = filterTemplate.content.firstElementChild.cloneNode(true);
-                filterElement.querySelector('span').innerText = searchBox.value;
+                filterElement.querySelector('span').textContent = searchBox.value;
                 searchBox.value = '';
 
                 filterElement.addEventListener('click', (event) => {
@@ -100,8 +100,30 @@
     </script>
 
     <script>
+        'use strict';
+
         window.addEventListener('DOMContentLoaded', () => {
-            findings.refreshFindings(window.manifest.findings, window.manifest.descriptions);
+            // manifest.filteredFindings = manifest.findings;
+            findings.refreshFindings(manifest.findings, manifest.descriptions, manifest.sorting);
+
+            document.querySelector('[data-id="name-header"]').textContent = manifest.metadata.name;
+
+            document.querySelector('[data-id="finding-count-header"]').textContent = `Flagged ${manifest.sorting.length} potential findings`;
+            document.querySelector('[data-id="flagged-file-count-header"]').textContent = `Flagged ${manifest.metadata.uniqueFiles} unique files`;
+
+            const duration = manifest.metadata.completedAt - manifest.metadata.startedAt;
+            document.querySelector('[data-id="duration-header"]').textContent = `Scanned over ${duration} seconds`;
+
+            const dateTime = new Date(manifest.metadata.completedAt * 1000);
+
+            const options = {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            };
+
+            document.querySelector('[data-id="timestamp-header"]').textContent = `Completed on ${dateTime.toLocaleDateString('en-us', options)}`;
         });
     </script>
 
@@ -164,7 +186,7 @@
                     which portion of text is the match.
                 -->
                 <div class="flex text-white mt-2 monospace">
-                    <textarea data-role="render-viewer" readonly="true" class="h-[10rem] resize-none shadow-inner block w-full rounded-md bg-zate-800 p-1 text-white border-transparent text-gray-500 border-2 focus:outline-none"></textarea>
+                    <textarea data-role="render-viewer" readonly="true" class="min-h-[10rem] resize-none shadow-inner block w-full rounded-md bg-zate-800 p-1 text-white border-transparent text-gray-500 border-2 focus:outline-none"></textarea>
                 </div>
             </div>
         </div>
@@ -211,21 +233,23 @@
                                     <i class="fa-solid fa-plus"></i>
                                 </button>
 
-                                <!-- This is the tag used to store the finding's file path. -->
-                                <div class="flex w-full">
-                                    <span class="text-gray-400 truncate bg-zate-800 px-3 py-1 rounded-md space-x-2 max-w-[75%]">
-                                        <i class="fa-solid fa-file"></i>
-                                        <span data-content="file-name" class="select-all monospace"></span>
-                                    </span>
-                                </div>
+                                <div class="grid-rows-2 space-y-2 w-full">
+                                    <!-- This is the tag used to store the finding's file path. -->
+                                    <div class="flex max-w-[50%] sm:max-w-[75%] w-fit">
+                                        <span class="text-gray-400 truncate bg-zate-800 px-3 py-1 rounded-md space-x-2 w-full">
+                                            <i class="fa-solid fa-file"></i>
+                                            <span data-content="file-name" class="select-all monospace"></span>
+                                        </span>
+                                    </div>
 
-                                <!-- This is the tag used to store the finding's value. -->
-                                <div class="flex w-full">
-                                    <div class="text-gray-400 truncate bg-zate-800 px-3 py-1 rounded-md space-x-2 max-w-[75%]">
-                                        <i class="fa-solid fa-key"></i>
-                                        <div class="select-all text-orange-300 inline-flex monospace">
-                                            <span data-content="value-censored" data-censored="true" class="transition-all"></span>
-                                            <span data-content="value-leftover"></span>
+                                    <!-- This is the tag used to store the finding's value. -->
+                                    <div class="flex max-w-[50%] sm:max-w-[75%] w-fit">
+                                        <div class="text-gray-400 bg-zate-800 px-3 py-1 rounded-md space-x-2 w-full inline-flex items-center">
+                                            <i class="fa-solid fa-fire-flame-curved"></i>
+                                            <div data-content="value" class="select-all text-orange-300 inline-flex monospace w-full truncate">
+                                                <span data-content="value-censored" data-censored="true" class="transition-all truncate"></span>
+                                                <span data-content="value-leftover" class="truncate"></span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -240,17 +264,9 @@
 
     </template>
 
-    <!-- THIS TEMPLATE NEEDS TO BE UPDATED. -->
-    <template data-id="inactive-page-button--template">
+    <template data-id="page-button-template">
 
-        <button class="inline-flex items-center px-4 pt-4 text-sm font-medium text-white hover:text-gray-200">2</button>
-
-    </template>
-
-    <!-- THIS TEMPLATE NEEDS TO BE UPDATED. -->
-    <template data-id="active-page-button--template">
-
-        <button class="inline-flex items-center px-4 pt-4 text-sm font-medium text-white">1</button>
+        <button class="inline-flex items-center px-4 py-2 mt-4 text-sm font-bold rounded-b-md text-gray-400 hover:text-orange-300 transition-all border-2 border-gray-400 hover:border-orange-500">2</button>
 
     </template>
 
@@ -268,8 +284,9 @@
                         <!-- Links section -->
                         <div class="hidden lg:ml-10 lg:block">
                             <div class="flex space-x-4" data-id="page-tabs">
-                                <button class="page-tab--inactive" data-page="page--graphs">Graphs</button>
-                                <button class="page-tab--active" data-page="page--secrets">Secrets</button>
+                                <button class="page-tab--active" data-page="page--secrets">Findings</button>
+                                <button class="page-tab--inactive" data-page="page--graphs">Files</button>
+                                <!-- <button class="page-tab--inactive" data-page="page--graphs">Graphs</button> -->
                             </div>
                         </div>
                     </div>
@@ -302,32 +319,26 @@
         <header class="bg-zate-800 pt-2 pb-6">
             <div class="mx-auto max-w-7xl px-4 sm:px-6 md:flex md:items-center md:justify-between">
                 <div class="min-w-0 flex-1">
-                    <nav class="flex" aria-label="Breadcrumb">
-                        <ol data-id="target-path-entries--header" role="list"
-                            class="flex flex-wrap items-center space-x-2">
-                        </ol>
-                    </nav>
-
-                    <h1 data-id="target-path--header"
+                    <h1 data-id="name-header"
                         class="text-2xl font-bold leading-7 text-white sm:truncate sm:text-3xl sm:tracking-tight">
                         Application-3.0.2</h1>
 
                     <div class="flex flex-col sm:mt-0 sm:flex-row sm:flex-wrap sm:space-x-8 pt-2">
                         <div class="flex items-center text-sm text-gray-400">
-                            <i class="fa-solid fa-key mr-1.5 flex-shrink-0"></i>
-                            <span data-id="secret-count--header">Found 6 potential secrets</span>
+                            <i class="fa-solid fa-fire-flame-curved mr-1.5 flex-shrink-0"></i>
+                            <span data-id="finding-count-header">Found 6 potential secrets</span>
                         </div>
                         <div class="flex items-center text-sm text-gray-400">
                             <i class="fa-solid fa-file mr-1.5 flex-shrink-0"></i>
-                            <span data-id="file-coverage--header">Scanned 7 files</span>
+                            <span data-id="flagged-file-count-header">Scanned 7 files</span>
                         </div>
                         <div class="flex items-center text-sm text-gray-400">
                             <i class="fa-solid fa-clock mr-1.5 flex-shrink-0"></i>
-                            <span data-id="search-duration--header">Took 32.4 seconds</span>
+                            <span data-id="duration-header">Took 32.4 seconds</span>
                         </div>
                         <div class="flex items-center text-sm text-gray-400">
                             <i class="fa-solid fa-calendar mr-1.5 flex-shrink-0"></i>
-                            <span data-id="timestamp--header">Completed March 9, 2023</span>
+                            <span data-id="timestamp-header">Completed March 9, 2023</span>
                         </div>
                     </div>
                 </div>
@@ -364,9 +375,9 @@
                     </div>
 
                     <!-- This is the container for our filters. -->
-                    <div class="mt-4 mb-2" data-id="filter-container">
+                    <div data-id="filter-container" class="mt-4 mb-2">
 
-                        <div class="flex flex-wrap gap-2 text-sm font-bold text-gray-400" data-id="filters">
+                        <div data-id="filters" class="flex flex-wrap gap-2 text-sm font-bold text-gray-400">
                         </div>
 
                         <hr class="border-zate-500 my-4"/>
@@ -374,31 +385,31 @@
 
 
                     <!-- This is the container for our findings. -->
-                    <div class="mt-0 space-y-2" data-id="finding-container">
+                    <div data-id="finding-container" class="mt-0 space-y-2">
                     </div>
 
                     <!-- Pagination -->
                     <nav class="flex items-center justify-between px-4 sm:px-0" aria-label="Pagination">
-                        <div class="-mt-px flex w-0 flex-1">
+                        <div class="flex">
                             <button data-id="page-button--first"
-                                class="inline-flex items-center pt-4 pr-1 text-sm font-medium text-white hover:text-orange-300 transition-all">
-                                <i class="fa-solid fa-arrow-left-long mr-3 text-white"></i> First
+                                class="inline-flex items-center mt-4 pr-1 text-sm font-medium text-white hover:text-orange-300 transition-all">
+                                <i class="fa-solid fa-arrow-left-long mr-3"></i> First
                             </button>
                         </div>
-                        <div class="hidden md:-mt-px md:flex" data-id="page-buttons">
-                            <button class="inline-flex items-center px-4 pt-4 text-sm font-medium text-white"
-                                aria-current="page">1</button>
+
+                        <div data-id="page-button-container" class="flex space-x-4">
                         </div>
-                        <div class="-mt-px flex w-0 flex-1 justify-end">
+
+                        <div class="flex justify-end">
                             <button data-id="page-button--last"
-                                class="inline-flex items-center pt-4 pl-1 text-sm font-medium text-white hover:text-orange-300 transition-all">
-                                Last <i class="fa-solid fa-arrow-right-long ml-3 text-white"></i>
+                                class="inline-flex items-center mt-4 pl-1 text-sm font-medium text-white hover:text-orange-300 transition-all">
+                                Last <i class="fa-solid fa-arrow-right-long ml-3"></i>
                             </button>
                         </div>
                     </nav>
                 </div>
 
-                <div data-id="page--graphs" class="hidden">
+                <div data-id="graph-page" class="hidden">
                     <div class="divide-y divide-dashed pb-16">
                         <!-- TODO: At some point... -->
                     </div>

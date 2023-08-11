@@ -6,7 +6,7 @@ from math import ceil
 from .mystik_core import recursive_regex_search
 
 
-def build_manifest(path, target_findings):
+def build_manifest(path, target_findings, manifest_name=None):
     started_at = ceil(time())
     unique_files = []
     patterns = []
@@ -21,9 +21,10 @@ def build_manifest(path, target_findings):
     matches = recursive_regex_search(str(path), patterns)
 
     manifest = {
-        'findings': {},
+        'metadata': {},
         'descriptions': {},
-        'metadata': {}
+        'sorting': [],
+        'findings': {},
     }
 
     for match in matches:
@@ -64,8 +65,19 @@ def build_manifest(path, target_findings):
         if not finding.name in manifest['descriptions']:
             manifest['descriptions'][finding.name] = finding.description
 
-        manifest['metadata']['started_at'] = started_at
-        manifest['metadata']['completed_at'] = ceil(time())
-        manifest['metadata']['unique_files'] = len(unique_files)
+    # We compute ratings for each of the findings.
+    ratings = {}
+
+    for uuid, finding in manifest['findings'].items():
+        ratings[uuid] = sum([indicator[1] for indicator in finding['indicators']])
+
+    # We include a pre-computed sorting of the values, just to save time later.
+    manifest['sorting'] = list(sorted(ratings, key=ratings.get, reverse=True))
+
+    # We staple on some metadata to the manifest.
+    manifest['metadata']['name'] = manifest_name or path.name
+    manifest['metadata']['startedAt'] = started_at
+    manifest['metadata']['completedAt'] = ceil(time())
+    manifest['metadata']['uniqueFiles'] = len(unique_files)
 
     return manifest

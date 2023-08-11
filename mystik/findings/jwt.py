@@ -47,7 +47,7 @@ class JSONWebToken(SecretFinding):
             if isinstance(payload, dict):
                 indicators.append(['Second segment is valid JSON', 1])
 
-                if 'sub' in header:
+                if 'sub' in payload:
                     indicators.append(['Second segment contains a subject', 1])
                 else:
                     indicators.append(['Second segment does not contain a subject', -0.5])

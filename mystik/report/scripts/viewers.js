@@ -10,7 +10,7 @@ function setupAddressViewer(container, byteArray, startPosition=0, rowSize=16) {
     for (let index = 0; index < byteArray.length; index += rowSize) {
         let addressElement = document.createElement('span');
         addressElement.classList.add('bg-zate-800', 'px-2', 'select-all');
-        addressElement.innerText = utilities.valueToHex(startPosition + index, 4);
+        addressElement.textContent = utilities.valueToHex(startPosition + index, 4);
 
         if (index === 0) {
             addressElement.classList.add('rounded-t-md');
@@ -48,7 +48,7 @@ function setupHexViewer(container, byteArray, highlightStart=0, highlightEnd=0, 
         let hexColumn = document.createElement('span');
         hexColumn.setAttribute('data-index', index);
         hexColumn.classList.add('px-1', 'border', 'border-transparent');
-        hexColumn.innerText = utilities.valueToHex(value);
+        hexColumn.textContent = utilities.valueToHex(value);
 
         if (highlightStart <= index && highlightEnd > index) {
             hexColumn.classList.add('bg-zate-800', 'text-orange-300');
@@ -96,7 +96,7 @@ function setupTextViewer(container, byteArray, highlightStart=0, highlightEnd=0,
         let textColumn = document.createElement('span');
         textColumn.setAttribute('data-index', index);
         textColumn.classList.add('border', 'border-transparent');
-        textColumn.innerText = utilities.valueToCharacter(value);
+        textColumn.textContent = utilities.valueToCharacter(value);
 
         if (highlightStart <= index && highlightEnd > index) {
             textColumn.classList.add('bg-zate-800', 'text-orange-300');
@@ -166,7 +166,7 @@ function setupSelector() {
         let clipboardText = '';
 
         for (const element of selectedElements) {
-            clipboardText += element.innerText;
+            clipboardText += element.textContent;
         }
 
         event.clipboardData.setData('text/plain', clipboardText);
@@ -249,7 +249,14 @@ function setupRenderViewer(container, byteArray, highlightStart=0, highlightEnd=
     /**
      * This function is used to setup the render viewer for the context panel.
      **/
-    container.querySelector('[data-role="render-viewer"]').value = utilities.byteArrayToString(byteArray, true);
+    const renderViewer = container.querySelector('[data-role="render-viewer"]');
+    renderViewer.value = utilities.byteArrayToString(byteArray, true);
+
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            renderViewer.style.setProperty('height', `${renderViewer.scrollHeight * 1.25}px`);
+        });
+    });
 }
 
 window.viewers = {
