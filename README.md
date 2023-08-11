@@ -1,2 +1,2 @@
 # Mystik
-This is an experimental rewrite of the wonderful [SecretSearcher](https://github.com/GoVanguard/SecretSearcher) Python script.
+This is an experimental attempt to improve the traditional secret searching techniques. **Findings** are primarily a Regular Expression pattern, name, and description which is defined as a subclass of `Finding` in Python. These findings are then captured out of the target directory using an efficient Rust-core before being passed back to Python and rated against **indicators**. Indicators are used to calculate **ratings**, which are used to determine how likely or unlikely a match is to be correct.
