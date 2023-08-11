@@ -40,9 +40,9 @@ def build_manifest(path, target_findings, manifest_name=None):
             groups=[standard_b64decode(group.encode()) for group in match.groups]
         )
 
-        value = sum([delta for _, delta in indicators]) / len(indicators)
+        rating = sum([delta for _, delta in indicators])
 
-        if value < 0:
+        if rating < 0:
             continue
 
         if match.file_name not in unique_files:
@@ -59,7 +59,9 @@ def build_manifest(path, target_findings, manifest_name=None):
             'patternName': match.pattern_name,
             'captureStart': match.capture_start,
             'captureEnd': match.capture_end,
-            'indicators': indicators
+            'indicators': indicators,
+            'rating': rating,
+            'idealRating': finding.ideal_rating
         }
 
         if not finding.name in manifest['descriptions']:
@@ -69,7 +71,7 @@ def build_manifest(path, target_findings, manifest_name=None):
     ratings = {}
 
     for uuid, finding in manifest['findings'].items():
-        ratings[uuid] = sum([indicator[1] for indicator in finding['indicators']])
+        ratings[uuid] = finding['rating'] / finding['idealRating']
 
     # We include a pre-computed sorting of the values, just to save time later.
     manifest['sorting'] = list(sorted(ratings, key=ratings.get, reverse=True))

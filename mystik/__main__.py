@@ -11,6 +11,8 @@ from jinja2 import Template
 
 from .findings.jwt import JSONWebToken
 from .findings.amazon import AmazonAccessKeyID
+from .findings.uuid import UUID
+from .findings.google import GoogleToken
 from .searcher import build_manifest
 
 
@@ -32,10 +34,10 @@ def main():
         exit()
 
     started_at = time()
-    manifest = build_manifest(target_path, [AmazonAccessKeyID, JSONWebToken])
+    manifest = build_manifest(target_path, [AmazonAccessKeyID, JSONWebToken, UUID, GoogleToken])
 
     with open('data.js', 'w') as file:
-        file.write('window.manifest = ' + to_json(manifest, indent=' ' * 4))
+        file.write('window.manifest = ' + to_json(manifest, indent=' ' * 4)) # , separators=(',', ':'))) #
 
     print(f'{time() - started_at:.2f} seconds')
 

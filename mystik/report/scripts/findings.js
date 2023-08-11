@@ -28,7 +28,7 @@ function setupPatterns(rootContainer, patterns) {
     }
 }
 
-function setupIndicators(rootContainer, indicators) {
+function setupIndicators(rootContainer, rating, idealRating, indicators) {
     /**
      * This function is used to setup the indicators within each finding's details.
      */
@@ -37,7 +37,7 @@ function setupIndicators(rootContainer, indicators) {
 
     for (const [reason, delta] of indicators) {
         const indicatorTag = template.content.firstElementChild.cloneNode(true);
-        indicatorTag.querySelector('span').textContent = reason;
+        indicatorTag.querySelector('span').textContent = `${reason} (${ delta > 0 ? '+' : '' }${delta})`;
         const icon = indicatorTag.querySelector('i');
 
         if (delta > 0) {
@@ -48,6 +48,8 @@ function setupIndicators(rootContainer, indicators) {
 
         container.appendChild(indicatorTag);
     }
+
+    container.parentElement.querySelector('[data-content="rating-text"]').textContent = `(${rating} actual / ${idealRating} ideal)`;
 }
 
 function setupContext(rootContainer, contextBase64, contextStart=0, highlightStart=0, highlightEnd=0, rowSize=16) {
@@ -62,13 +64,13 @@ function setupContext(rootContainer, contextBase64, contextStart=0, highlightSta
     viewers.setupRenderViewer(rootContainer, contextByteArray, highlightStart, highlightEnd);
 }
 
-function createDetails(containerRoot, descriptions, patterns, indicators, contextBase64, contextStart=0, highlightStart=0, highlightEnd=0, rowSize=16) {
+function createDetails(containerRoot, descriptions, patterns, rating, idealRating, indicators, contextBase64, contextStart=0, highlightStart=0, highlightEnd=0, rowSize=16) {
     const template = document.querySelector('[data-id="finding-details-template"]');
     const detailsContainer = template.content.firstElementChild.cloneNode(true);
 
     setupDescription(detailsContainer, descriptions);
     setupPatterns(detailsContainer, patterns);
-    setupIndicators(detailsContainer, indicators);
+    setupIndicators(detailsContainer, rating, idealRating, indicators);
     setupContext(detailsContainer, contextBase64, contextStart, highlightStart, highlightEnd, rowSize);
 
     containerRoot.appendChild(detailsContainer);
@@ -81,7 +83,7 @@ function removeFindings() {
     findingsContainer.replaceChildren();
 }
 
-function createFinding(uuid, fileName, valueBase64, patterns, name, descriptions, indicators, contextBase64, contextStart=0, highlightStart=0, highlightEnd=0, rowSize=16) {
+function createFinding(uuid, fileName, valueBase64, rating, idealRating, patterns, name, descriptions, indicators, contextBase64, contextStart=0, highlightStart=0, highlightEnd=0, rowSize=16) {
     const template = document.querySelector('[data-id="finding-template"]');
     const finding = template.content.firstElementChild.cloneNode(true);
     finding.setAttribute('data-id', uuid);
@@ -111,23 +113,16 @@ function createFinding(uuid, fileName, valueBase64, patterns, name, descriptions
     });
 
     // We also setup the ratings based on their indicators.
-    let rating = 0;
-
-    for (const [reason, delta] of indicators) {
-        if (delta > 0) {
-            rating += delta;
-        }
-    }
-
     const ratingContainer = finding.querySelector('[data-content="rating"]');
-    const maxIcons = 5;
+    const relativeRating = rating / idealRating;
+    const maxStars = 5;
 
-    for (let index = 0; index < maxIcons; index++) {
+    for (let index = 0; index < maxStars; index++) {
         const icon = document.createElement('i');
         icon.classList.add('fa-solid', 'fa-star');
         ratingContainer.appendChild(icon);
 
-        if ((index + 1) / (maxIcons + 1) <= rating / indicators.length) {
+        if (index / maxStars < relativeRating) {
             icon.classList.add('text-orange-500');
         }
     }
@@ -147,6 +142,8 @@ function createFinding(uuid, fileName, valueBase64, patterns, name, descriptions
                 finding,
                 descriptions,
                 patterns,
+                rating,
+                idealRating,
                 indicators,
                 contextBase64,
                 contextStart,
@@ -239,6 +236,8 @@ function refreshFindings(findings, descriptions, sorting) {
             uuid,
             finding.fileName,
             finding.capture,
+            finding.rating,
+            finding.idealRating,
             [finding.pattern],
             finding.patternName,
             descriptions[finding.patternName],
@@ -262,8 +261,6 @@ function refreshFindings(findings, descriptions, sorting) {
         button.textContent = index + 1;
 
         if (index === pageIndex) {
-            // button.classList.add('text-white', 'border-white', 'border-b-2', 'border-x-2');
-            // button.classList.remove('text-gray-400', 'border-2', 'border-gray-400');
             button.classList.add('text-white', 'border-white');
             button.classList.remove('text-gray-400', 'border-gray-400');
         } else {

@@ -18,6 +18,8 @@ class JSONWebToken(SecretFinding):
         '(?i)([a-z0-9\-_]{3,})\.([a-z0-9\-_]{3,})\.([a-z0-9\-_]*)'
     ]
 
+    ideal_rating = 6
+
     @classmethod
     def get_indicators(this, context, context_start, context_end, capture, capture_start, capture_end, groups):
         indicators = super().get_indicators(context, context_start, context_end, capture, capture_start, capture_end, groups)
@@ -38,7 +40,7 @@ class JSONWebToken(SecretFinding):
         except (UnicodeDecodeError, BinError):
             indicators.append(['First segment is not valid unicode', -2])
         except JSONDecodeError:
-            indicators.append(['First segment is not valid JSON', -1])
+            indicators.append(['First segment is not valid JSON', -2])
 
         try:
             json = standard_b64decode(groups[1] + b'==').decode()
@@ -54,8 +56,17 @@ class JSONWebToken(SecretFinding):
             else:
                 indicators.append(['Second segment is not valid JSON object', -1])
         except (UnicodeDecodeError, BinError):
-            indicators.append(['Second segment is not valid unicode', -2])
+            indicators.append(['Second segment is not valid unicode', -0.5])
         except JSONDecodeError:
-            indicators.append(['Second segment is not valid JSON', -1])
+            indicators.append(['Second segment is not valid JSON', -0.5])
+
+        try:
+            json = standard_b64decode(groups[1] + b'==').decode()
+            from_json(json)
+            indicators.append(['Third segment is valid JSON', -2])
+        except (UnicodeDecodeError, BinError):
+            indicators.append(['Third segment is not valid unicode', 0.5])
+        except JSONDecodeError:
+            indicators.append(['Third segment is not valid JSON', 0.5])
 
         return indicators

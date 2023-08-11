@@ -14,6 +14,8 @@ class AmazonAccessKeyID(SecretFinding):
         'A[SK]IA[A-Z2-7]{16}'
     ]
 
+    ideal_rating = 3
+
     @classmethod
     def get_indicators(this, context, context_start, context_end, capture, capture_start, capture_end, groups):
         indicators = super().get_indicators(context, context_start, context_end, capture, capture_start, capture_end, groups)
@@ -27,8 +29,8 @@ class AmazonAccessKeyID(SecretFinding):
         account_id = 2 * (offset_account_id - 549755813888)
 
         if account_id > 0:
-            indicators.append(['Calculated account ID appears valid', 0.5])
+            indicators.append(('Calculated account ID appears valid', 1))
         else:
-            indicators.append(['Calculated account ID is invalid', -1])
+            indicators.append(('Calculated account ID is invalid', -1))
 
         return indicators
