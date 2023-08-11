@@ -79,22 +79,57 @@
             const searchBox = document.querySelector('[data-id="search-box"]');
             const filterTemplate = document.querySelector('[data-id="filter-template"]');
             const filters = document.querySelector('[data-id="filters"]');
+            const filterTerms = [];
+
+            function refreshFindingsWithFilters() {
+                let newFindings = {};
+                let newSorting = [];
+
+                for (let index = 0; index < Object.keys(manifest.findings).length; index++) {
+                    const uuid = manifest.sorting[index];
+                    const finding = manifest.findings[uuid];
+                    let meetsTerms = true;
+
+                    for (const term of filterTerms) {
+                        const invertTerm = term.startsWith('!');
+
+                        if (finding.patternName.includes(term.substring(1)) === invertTerm) {
+                            meetsTerms = false;
+                            break;
+                        }
+                    }
+
+                    if (meetsTerms) {
+                        newFindings[uuid] = finding;
+                        newSorting.push(uuid);
+                    }
+                }
+
+                findings.refreshFindings(newFindings, manifest.descriptions, newSorting);
+            }
+
+            function addFilter(term) {
+                const filterElement = filterTemplate.content.firstElementChild.cloneNode(true);
+                filterElement.querySelector('span').textContent = term;
+                filterTerms.push(term);
+
+                filterElement.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    filterElement.remove();
+                    filterTerms.splice(filterTerms.indexOf(term), 1);
+                    refreshFindingsWithFilters();
+                });
+
+                filters.appendChild(filterElement);
+            }
 
             searchBox.addEventListener('keyup', (event) => {
                 if (event.key !== 'Enter') {
                     return;
                 }
-
-                const filterElement = filterTemplate.content.firstElementChild.cloneNode(true);
-                filterElement.querySelector('span').textContent = searchBox.value;
+                addFilter(searchBox.value);
                 searchBox.value = '';
-
-                filterElement.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    filterElement.remove();
-                });
-
-                filters.appendChild(filterElement);
+                refreshFindingsWithFilters();
             })
         });
     </script>

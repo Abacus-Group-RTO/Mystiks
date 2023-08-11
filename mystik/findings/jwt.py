@@ -23,50 +23,55 @@ class JSONWebToken(SecretFinding):
     @classmethod
     def get_indicators(this, context, context_start, context_end, capture, capture_start, capture_end, groups):
         indicators = super().get_indicators(context, context_start, context_end, capture, capture_start, capture_end, groups)
+        is_encrypted = False
 
         try:
             json = standard_b64decode(groups[0] + b'==').decode()
             header = from_json(json)
 
             if isinstance(header, dict):
-                indicators.append(['First segment is valid JSON', 1])
+                indicators.append(('First segment is valid JSON', 1))
+
+                if 'enc' in header:
+                    is_encrypted = True
 
                 if 'alg' in header:
-                    indicators.append(['First segment contains expected JSON', 1])
+                    indicators.append(('First segment contains expected JSON', 1))
                 else:
-                    indicators.append(['First segment does not contain expected JSON', -0.5])
+                    indicators.append(('First segment does not contain expected JSON', -0.5))
             else:
-                indicators.append(['First segment is not valid JSON object', -1])
+                indicators.append(('First segment is not valid JSON object', -1))
         except (UnicodeDecodeError, BinError):
-            indicators.append(['First segment is not valid unicode', -2])
+            indicators.append(('First segment is not valid unicode', -2))
         except JSONDecodeError:
-            indicators.append(['First segment is not valid JSON', -2])
+            indicators.append(('First segment is not valid JSON', -2))
 
         try:
             json = standard_b64decode(groups[1] + b'==').decode()
             payload = from_json(json)
 
             if isinstance(payload, dict):
-                indicators.append(['Second segment is valid JSON', 1])
+                indicators.append(('Second segment is valid JSON', 1))
 
                 if 'sub' in payload:
-                    indicators.append(['Second segment contains a subject', 1])
+                    indicators.append(('Second segment contains a subject', 1))
                 else:
-                    indicators.append(['Second segment does not contain a subject', -0.5])
+                    indicators.append(('Second segment does not contain a subject', -0.5))
             else:
-                indicators.append(['Second segment is not valid JSON object', -1])
-        except (UnicodeDecodeError, BinError):
-            indicators.append(['Second segment is not valid unicode', -0.5])
-        except JSONDecodeError:
-            indicators.append(['Second segment is not valid JSON', -0.5])
+                indicators.append(('Second segment is not valid JSON object', -1))
+        except (UnicodeDecodeError, BinError, JSONDecodeError):
+            if is_encrypted:
+                indicators.append(('Second segment appears to be encrypted', 1))
+            else:
+                indicators.append(('Second segment is not valid unicode or JSON', -1))
 
         try:
-            json = standard_b64decode(groups[1] + b'==').decode()
+            json = standard_b64decode(groups[2] + b'==').decode()
             from_json(json)
-            indicators.append(['Third segment is valid JSON', -2])
+            indicators.append(('Third segment is valid JSON', -2))
         except (UnicodeDecodeError, BinError):
-            indicators.append(['Third segment is not valid unicode', 0.5])
+            indicators.append(('Third segment is not valid unicode', 0.5))
         except JSONDecodeError:
-            indicators.append(['Third segment is not valid JSON', 0.5])
+            indicators.append(('Third segment is not valid JSON', 0.5))
 
         return indicators

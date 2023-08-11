@@ -251,7 +251,7 @@ function refreshFindings(findings, descriptions, sorting) {
     }
 
     const buttonStartIndex = Math.max(pageIndex - 3, 0);
-    const buttonStopIndex = Math.min(pageIndex + 3, totalPages);
+    const buttonStopIndex = Math.min(pageIndex + 4, totalPages);
     const buttonTemplate = document.querySelector('[data-id="page-button-template"]');
     const buttonContainer = document.querySelector('[data-id="page-button-container"]');
     buttonContainer.replaceChildren();
