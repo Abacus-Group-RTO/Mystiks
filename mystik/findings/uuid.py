@@ -20,10 +20,23 @@ class UUID(SecretFinding):
     def get_indicators(this, context, context_start, context_end, capture, capture_start, capture_end, groups):
         indicators = super().get_indicators(context, context_start, context_end, capture, capture_start, capture_end, groups)
 
+        # We remove all dashes in order to better calculate the UUID's entropy.
+        entropy = this.calculate_entropy(capture.replace(b'-', b''))
+
+        # If the UUID's entropy is significantly low, due to repetitions of the
+        # same number for instance, it is likely not secret.
+        if entropy < 1:
+            indicators.append((f'Value has significantly-low Shannon entropy of {entropy:.4f}', -2))
+        # If the entropy is exactly 3.25, this could indicate a sequental
+        # UUID pattern. This is not always the case, however, so this rating
+        # only downgrades the finding by -0.5.
+        elif entropy == 3.25:
+            indicators.append((f'Value has unusual Shannon entropy of {entropy:.2f}', -0.5))
+
         # If the string indicates version 1, 3, 4, or 5: it's most-likely a UUID.
         if chr(capture[14]) in ('1', '3', '4', '5'):
             indicators.append(('Value specifies a known UUID version', 1))
         else:
-            indicators.append(('Value does not specify a known UUID version', -0.5))
+            indicators.append(('Value does not specify a known UUID version', -1))
 
         return indicators

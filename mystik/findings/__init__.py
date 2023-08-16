@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+from math import log2
+
+
 class Finding:
     ideal_rating = 5
 
@@ -44,3 +47,22 @@ class SecretFinding(Finding):
             indicators.append(('Capture is not segmented', -0.5))
 
         return indicators
+
+    @staticmethod
+    def calculate_entropy(string):
+        # Create a dictionary to store the frequency of each character
+        freq_dict = {}
+        for char in string:
+            if char in freq_dict:
+                freq_dict[char] += 1
+            else:
+                freq_dict[char] = 1
+
+        # Calculate the entropy
+        entropy = 0
+        total_chars = len(string)
+        for count in freq_dict.values():
+            probability = count / total_chars
+            entropy += probability * log2(probability)
+
+        return -entropy
