@@ -20,8 +20,10 @@ def build_manifest(path, target_findings, manifest_name=None):
 
     max_file_size = 1024 * 1024 * 1024
 
-    result = recursive_regex_search(str(path), [(n, p.encode()) for n, p in patterns], 1024)
+    result = recursive_regex_search(str(path), [(n, p.encode()) for n, p in patterns], 128)
 
+    print(result.scan_started_at)
+    print(result.scan_completed_at)
     print(result.total_files_scanned)
     print(result.total_directories_scanned)
 

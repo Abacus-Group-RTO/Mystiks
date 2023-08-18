@@ -19,9 +19,9 @@ struct SearchResult {
     #[pyo3(get, set)]
     uuid: String,
     #[pyo3(get, set)]
-    started_at: u64,
+    scan_started_at: u64,
     #[pyo3(get, set)]
-    finished_at: u64,
+    scan_completed_at: u64,
     #[pyo3(get, set)]
     total_files_scanned: usize,
     #[pyo3(get, set)]
@@ -98,7 +98,7 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, &PyByte
     // We keep some operation statistics.
     let mut total_files_scanned = 0;
     let mut total_directories_scanned = 0;
-    let started_at = SystemTime::now();
+    let scan_started_at = SystemTime::now();
 
     // We start walking over all the files in the target path.
     for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
@@ -187,7 +187,7 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, &PyByte
     // just a fancy way to join the threads together.
     drop(tx);
 
-    let finished_at = SystemTime::now();
+    let scan_completed_at = SystemTime::now();
 
     // We iterate through the result queue and push those into an array.
     let mut search_matches = Vec::new();
@@ -215,8 +215,8 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, &PyByte
 
     Ok(SearchResult {
         uuid: Uuid::new_v4().to_string(),
-        started_at: started_at.duration_since(UNIX_EPOCH).unwrap().as_secs(),
-        finished_at: finished_at.duration_since(UNIX_EPOCH).unwrap().as_secs(),
+        scan_started_at: scan_started_at.duration_since(UNIX_EPOCH).unwrap().as_secs(),
+        scan_completed_at: scan_completed_at.duration_since(UNIX_EPOCH).unwrap().as_secs(),
         total_files_scanned: total_files_scanned,
         total_directories_scanned: total_directories_scanned,
         matches: search_matches,
