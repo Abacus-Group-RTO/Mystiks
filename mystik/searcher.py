@@ -20,9 +20,10 @@ def build_manifest(path, target_findings, manifest_name=None):
 
     max_file_size = 1024 * 1024 * 1024
 
-    result = recursive_regex_search(str(path), [(n, p.encode()) for n, p in patterns], 128, max_file_size)
+    result = recursive_regex_search(str(path), [(n, p.encode()) for n, p in patterns], 1024)
 
     print(result.total_files_scanned)
+    print(result.total_directories_scanned)
 
     matches = result.matches
 
@@ -34,7 +35,7 @@ def build_manifest(path, target_findings, manifest_name=None):
     }
 
     for match in matches:
-        finding = mappings[match.pattern_name]
+        finding = mappings[match.pattern_tag]
 
         indicators = finding.get_indicators(
             context=match.context,
@@ -62,7 +63,7 @@ def build_manifest(path, target_findings, manifest_name=None):
             'contextEnd': match.context_end,
             'capture': standard_b64encode(match.capture).decode(),
             'pattern': match.pattern,
-            'patternName': match.pattern_name,
+            'patternName': match.pattern_tag,
             'captureStart': match.capture_start,
             'captureEnd': match.capture_end,
             'indicators': indicators,
