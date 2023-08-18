@@ -38,6 +38,7 @@ struct Match {
     context_end: usize,
 }
 
+
 #[pymethods]
 impl Match {
     fn __repr__(&self) -> PyResult<String> {
@@ -46,9 +47,9 @@ impl Match {
     }
 }
 
+
 #[pyfunction]
-fn recursive_regex_search(path: &str, patterns: Vec<(String, &str)>) -> PyResult<Vec<Match>> {
-    let mut matching_files = Vec::new();
+fn recursive_regex_search(path: &str, patterns: Vec<(String, &str)>, desired_context: usize, max_file_size: usize) -> PyResult<Vec<Match>> {
     let regex_patterns: Vec<(String, Regex)> = patterns
         .iter()
         .map(|(name, pattern)| (name.clone(), Regex::new(pattern).unwrap()))
@@ -60,6 +61,7 @@ fn recursive_regex_search(path: &str, patterns: Vec<(String, &str)>) -> PyResult
     let max_threads = num_cpus::get();
     let mut thread_pool = Vec::new();
 
+    // We start walking over all the files in the target path.
     for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
         if !entry.file_type().is_file() {
             continue;
@@ -71,25 +73,35 @@ fn recursive_regex_search(path: &str, patterns: Vec<(String, &str)>) -> PyResult
 
         let thread_handle = thread::spawn(move || {
             let mut file = File::open(&path).unwrap();
+
+            // If the file is too big, we skip it.
+            if file.metadata().unwrap().len() > max_file_size.try_into().unwrap() {
+                return;
+            }
+
+            // We read the file's contents into memory for scanning.
             let mut contents = Vec::new();
             file.read_to_end(&mut contents).unwrap();
 
+            // Time to iterate through our capture patterns!
             for (pattern_name, pattern) in regex_patterns {
                 for capture in pattern.captures_iter(&contents) {
                     let full_match = capture.get(0).unwrap();
 
+                    // We make sure that the correct amount of context is stored.
                     let mut context_start = 0;
 
-                    if full_match.start() > 128 {
-                        context_start = full_match.start() - 128;
+                    if full_match.start() > desired_context {
+                        context_start = full_match.start() - desired_context;
                     }
 
                     let mut context_end = contents.len();
 
-                    if context_end > full_match.end() + 128 {
-                        context_end = full_match.end() + 128;
+                    if context_end > full_match.end() + desired_context {
+                        context_end = full_match.end() + desired_context;
                     }
 
+                    // We store each capture group.
                     let mut groups: Vec<String> = Vec::new();
 
                     if capture.len() > 1 {
@@ -99,6 +111,7 @@ fn recursive_regex_search(path: &str, patterns: Vec<(String, &str)>) -> PyResult
                         }
                     }
 
+                    // We can now acquire the lock and push our results back!
                     tx.lock().unwrap().send(Match {
                         uuid: Uuid::new_v4().to_string(),
                         file_name: path.display().to_string(),
@@ -118,6 +131,7 @@ fn recursive_regex_search(path: &str, patterns: Vec<(String, &str)>) -> PyResult
 
         thread_pool.push(thread_handle);
 
+        // If our thread count is too high, we just wait on one to exit.
         while thread_pool.len() >= max_threads {
             let completed_thread = thread_pool.remove(0);
             completed_thread.join().unwrap();
@@ -125,6 +139,9 @@ fn recursive_regex_search(path: &str, patterns: Vec<(String, &str)>) -> PyResult
     }
 
     drop(tx);
+
+    // We iterate through the result queue and push those into an array.
+    let mut matching_files = Vec::new();
 
     for match_obj in rx.iter() {
         matching_files.push(match_obj);

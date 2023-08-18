@@ -7,7 +7,6 @@ from datetime import datetime as DateTime
 from json import dumps as to_json
 # from plotly import express as px, graph_objects as go
 from re import split
-from jinja2 import Template
 
 from .findings.jwt import JSONWebToken
 from .findings.amazon import AmazonAccessKeyID

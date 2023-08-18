@@ -18,7 +18,9 @@ def build_manifest(path, target_findings, manifest_name=None):
 
         mappings[finding.name] = finding
 
-    matches = recursive_regex_search(str(path), patterns)
+    max_file_size = 1024 * 1024 * 1024
+
+    matches = recursive_regex_search(str(path), patterns, 128, max_file_size)
 
     manifest = {
         'metadata': {},
