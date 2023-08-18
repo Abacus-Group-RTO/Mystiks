@@ -1,22 +1,31 @@
 use num_cpus;
 use pyo3::prelude::*;
-use pyo3::wrap_pyfunction;
 use pyo3::types::PyBytes;
+use pyo3::wrap_pyfunction;
 use regex::bytes::Regex;
 use std::fs::File;
 use std::io::prelude::*;
+use std::str::from_utf8;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::channel;
 use std::thread;
+use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 use walkdir::WalkDir;
-use std::str::from_utf8;
 
 
 #[pyclass]
 struct SearchResult {
     #[pyo3(get, set)]
+    uuid: String,
+    #[pyo3(get, set)]
+    started_at: u64,
+    #[pyo3(get, set)]
+    finished_at: u64,
+    #[pyo3(get, set)]
     total_files_scanned: usize,
+    #[pyo3(get, set)]
+    total_directories_scanned: usize,
     #[pyo3(get, set)]
     matches: Vec<SearchMatch>
 }
@@ -32,7 +41,7 @@ struct SearchMatch {
     #[pyo3(get, set)]
     pattern: String,
     #[pyo3(get, set)]
-    pattern_name: String,
+    pattern_tag: String,
     #[pyo3(get, set)]
     groups: Vec<Py<PyBytes>>,
     #[pyo3(get, set)]
@@ -50,20 +59,12 @@ struct SearchMatch {
 }
 
 
-#[pymethods]
-impl SearchMatch {
-    fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("SearchMatch(file_name={}, capture={}, pattern_name={}, capture_start={}, capture_end={}, context={}, context_start={}, context_end={})",
-            self.file_name, self.capture, self.pattern_name, self.capture_start, self.capture_end, self.context, self.context_start, self.context_end))
-    }
-}
-
-
-struct Match {
+// We use a temporary
+struct TemporaryMatch {
     uuid: String,
     file_name: String,
     pattern: String,
-    pattern_name: String,
+    pattern_tag: String,
     groups: Vec<Vec<u8>>,
     capture: Vec<u8>,
     capture_start: usize,
@@ -75,22 +76,37 @@ struct Match {
 
 
 #[pyfunction]
-fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, &PyBytes)>, desired_context: usize, max_file_size: usize) -> PyResult<SearchResult> {
+fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, &PyBytes)>, desired_context: Option<usize>, max_file_size: Option<usize>, max_threads: Option<usize>) -> PyResult<SearchResult> {
+    // If any of the function arguments are left blank, we assign defaults here.
+    let desired_context = desired_context.unwrap_or(128);
+    let max_file_size = max_file_size.unwrap_or(0);
+    let max_threads = max_threads.unwrap_or(num_cpus::get());
+
+    // We compile each pattern and its tag into a vector.
     let regex_patterns: Vec<(String, Regex)> = patterns
         .iter()
-        .map(|(name, pattern)| (name.clone(), Regex::new(from_utf8(pattern.as_bytes()).unwrap()).unwrap()))
+        .map(|(tag, pattern)| (tag.clone(), Regex::new(from_utf8(pattern.as_bytes()).unwrap()).unwrap()))
         .collect();
 
-    let (tx, rx) = channel::<Match>();
+    // We prepare some queues for us to use between threads.
+    let (tx, rx) = channel::<TemporaryMatch>();
     let tx = Arc::new(Mutex::new(tx));
 
-    let max_threads = num_cpus::get();
+    // We initialize our thread pool.
     let mut thread_pool = Vec::new();
+
+    // We keep some operation statistics.
     let mut total_files_scanned = 0;
+    let mut total_directories_scanned = 0;
+    let started_at = SystemTime::now();
 
     // We start walking over all the files in the target path.
     for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
         if !entry.file_type().is_file() {
+            if entry.file_type().is_dir() {
+                total_directories_scanned += 1;
+            }
+
             continue;
         }
 
@@ -104,7 +120,7 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, &PyByte
             let mut file = File::open(&path).unwrap();
 
             // If the file is too big, we skip it.
-            if file.metadata().unwrap().len() > max_file_size.try_into().unwrap() {
+            if max_file_size > 0 && file.metadata().unwrap().len() > max_file_size.try_into().unwrap() {
                 return;
             }
 
@@ -113,7 +129,7 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, &PyByte
             file.read_to_end(&mut contents).unwrap();
 
             // Time to iterate through our capture patterns!
-            for (pattern_name, pattern) in regex_patterns {
+            for (pattern_tag, pattern) in regex_patterns {
                 for capture in pattern.captures_iter(&contents) {
                     let full_match = capture.get(0).unwrap();
 
@@ -141,11 +157,11 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, &PyByte
                     }
 
                     // We can now acquire the lock and push our results back!
-                    tx.lock().unwrap().send(Match {
+                    tx.lock().unwrap().send(TemporaryMatch {
                         uuid: Uuid::new_v4().to_string(),
                         file_name: path.display().to_string(),
                         pattern: pattern.as_str().to_string(),
-                        pattern_name: pattern_name.clone(),
+                        pattern_tag: pattern_tag.clone(),
                         groups: groups,
                         capture: contents[full_match.start()..full_match.end()].to_vec(),
                         capture_start: full_match.start(),
@@ -162,15 +178,19 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, &PyByte
 
         // If our thread count is too high, we just wait on one to exit.
         while thread_pool.len() >= max_threads {
-            let completed_thread = thread_pool.remove(0);
-            completed_thread.join().unwrap();
+            let thread = thread_pool.remove(0);
+            thread.join().unwrap();
         }
     }
 
+    // This waits for the queue to be released before dropping it; this is
+    // just a fancy way to join the threads together.
     drop(tx);
 
+    let finished_at = SystemTime::now();
+
     // We iterate through the result queue and push those into an array.
-    let mut matching_files = Vec::new();
+    let mut search_matches = Vec::new();
 
     for match_obj in rx.iter() {
         let groups_as_bytes: Vec<Py<PyBytes>> = match_obj.groups
@@ -178,11 +198,11 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, &PyByte
             .map(|group| PyBytes::new(py, group).into())
             .collect();
 
-        matching_files.push(SearchMatch {
+        search_matches.push(SearchMatch {
             uuid: match_obj.uuid,
             file_name: match_obj.file_name,
             pattern: match_obj.pattern,
-            pattern_name: match_obj.pattern_name,
+            pattern_tag: match_obj.pattern_tag,
             groups: groups_as_bytes,
             capture: PyBytes::new(py, &match_obj.capture).into(),
             capture_start: match_obj.capture_start,
@@ -194,8 +214,12 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, &PyByte
     }
 
     Ok(SearchResult {
+        uuid: Uuid::new_v4().to_string(),
+        started_at: started_at.duration_since(UNIX_EPOCH).unwrap().as_secs(),
+        finished_at: finished_at.duration_since(UNIX_EPOCH).unwrap().as_secs(),
         total_files_scanned: total_files_scanned,
-        matches: matching_files,
+        total_directories_scanned: total_directories_scanned,
+        matches: search_matches,
     })
 }
 
