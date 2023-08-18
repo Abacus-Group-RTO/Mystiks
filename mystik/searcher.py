@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from base64 import standard_b64decode
+from base64 import standard_b64decode, standard_b64encode
 from time import time
 from math import ceil
 
@@ -20,7 +20,11 @@ def build_manifest(path, target_findings, manifest_name=None):
 
     max_file_size = 1024 * 1024 * 1024
 
-    matches = recursive_regex_search(str(path), patterns, 128, max_file_size)
+    result = recursive_regex_search(str(path), [(n, p.encode()) for n, p in patterns], 128, max_file_size)
+
+    print(result.total_files_scanned)
+
+    matches = result.matches
 
     manifest = {
         'metadata': {},
@@ -33,13 +37,13 @@ def build_manifest(path, target_findings, manifest_name=None):
         finding = mappings[match.pattern_name]
 
         indicators = finding.get_indicators(
-            context=standard_b64decode(match.context.encode()),
+            context=match.context,
             context_start=match.context_start,
             context_end=match.context_end,
-            capture=standard_b64decode(match.capture.encode()),
+            capture=match.capture,
             capture_start=match.capture_start - match.context_start,
             capture_end=match.capture_end - match.context_start,
-            groups=[standard_b64decode(group.encode()) for group in match.groups]
+            groups=match.groups
         )
 
         rating = sum([delta for _, delta in indicators])
@@ -52,11 +56,11 @@ def build_manifest(path, target_findings, manifest_name=None):
 
         manifest['findings'][match.uuid] = {
             'fileName': match.file_name,
-            'groups': match.groups,
-            'context': match.context,
+            'groups': [standard_b64encode(group).decode() for group in match.groups],
+            'context': standard_b64encode(match.context).decode(),
             'contextStart': match.context_start,
             'contextEnd': match.context_end,
-            'capture': match.capture,
+            'capture': standard_b64encode(match.capture).decode(),
             'pattern': match.pattern,
             'patternName': match.pattern_name,
             'captureStart': match.capture_start,

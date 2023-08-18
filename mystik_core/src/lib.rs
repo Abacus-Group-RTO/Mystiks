@@ -1,7 +1,7 @@
-use base64::{Engine as _, engine::general_purpose};
 use num_cpus;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
+use pyo3::types::PyBytes;
 use regex::bytes::Regex;
 use std::fs::File;
 use std::io::prelude::*;
@@ -10,10 +10,21 @@ use std::sync::mpsc::channel;
 use std::thread;
 use uuid::Uuid;
 use walkdir::WalkDir;
+use std::str::from_utf8;
 
 
 #[pyclass]
-struct Match {
+struct SearchResult {
+    #[pyo3(get, set)]
+    total_files_scanned: usize,
+    #[pyo3(get, set)]
+    matches: Vec<SearchMatch>
+}
+
+
+#[pyclass]
+#[derive(Clone)]
+struct SearchMatch {
     #[pyo3(get, set)]
     uuid: String,
     #[pyo3(get, set)]
@@ -23,15 +34,15 @@ struct Match {
     #[pyo3(get, set)]
     pattern_name: String,
     #[pyo3(get, set)]
-    groups: Vec<String>,
+    groups: Vec<Py<PyBytes>>,
     #[pyo3(get, set)]
-    capture: String,
+    capture: Py<PyBytes>,
     #[pyo3(get, set)]
     capture_start: usize,
     #[pyo3(get, set)]
     capture_end: usize,
     #[pyo3(get, set)]
-    context: String,
+    context: Py<PyBytes>,
     #[pyo3(get, set)]
     context_start: usize,
     #[pyo3(get, set)]
@@ -40,19 +51,34 @@ struct Match {
 
 
 #[pymethods]
-impl Match {
+impl SearchMatch {
     fn __repr__(&self) -> PyResult<String> {
-        Ok(format!("Match(file_name={}, capture={}, pattern_name={}, capture_start={}, capture_end={}, context={}, context_start={}, context_end={})",
+        Ok(format!("SearchMatch(file_name={}, capture={}, pattern_name={}, capture_start={}, capture_end={}, context={}, context_start={}, context_end={})",
             self.file_name, self.capture, self.pattern_name, self.capture_start, self.capture_end, self.context, self.context_start, self.context_end))
     }
 }
 
 
+struct Match {
+    uuid: String,
+    file_name: String,
+    pattern: String,
+    pattern_name: String,
+    groups: Vec<Vec<u8>>,
+    capture: Vec<u8>,
+    capture_start: usize,
+    capture_end: usize,
+    context: Vec<u8>,
+    context_start: usize,
+    context_end: usize,
+}
+
+
 #[pyfunction]
-fn recursive_regex_search(path: &str, patterns: Vec<(String, &str)>, desired_context: usize, max_file_size: usize) -> PyResult<Vec<Match>> {
+fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, &PyBytes)>, desired_context: usize, max_file_size: usize) -> PyResult<SearchResult> {
     let regex_patterns: Vec<(String, Regex)> = patterns
         .iter()
-        .map(|(name, pattern)| (name.clone(), Regex::new(pattern).unwrap()))
+        .map(|(name, pattern)| (name.clone(), Regex::new(from_utf8(pattern.as_bytes()).unwrap()).unwrap()))
         .collect();
 
     let (tx, rx) = channel::<Match>();
@@ -60,12 +86,15 @@ fn recursive_regex_search(path: &str, patterns: Vec<(String, &str)>, desired_con
 
     let max_threads = num_cpus::get();
     let mut thread_pool = Vec::new();
+    let mut total_files_scanned = 0;
 
     // We start walking over all the files in the target path.
     for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
         if !entry.file_type().is_file() {
             continue;
         }
+
+        total_files_scanned += 1;
 
         let tx = tx.clone();
         let path = entry.path().to_owned();
@@ -102,12 +131,12 @@ fn recursive_regex_search(path: &str, patterns: Vec<(String, &str)>, desired_con
                     }
 
                     // We store each capture group.
-                    let mut groups: Vec<String> = Vec::new();
+                    let mut groups: Vec<Vec<u8>> = Vec::new();
 
                     if capture.len() > 1 {
                         for index in 1..capture.len() {
                             let group = capture.get(index).unwrap();
-                            groups.push(general_purpose::STANDARD.encode(&contents[group.start()..group.end()]));
+                            groups.push(contents[group.start()..group.end()].to_vec());
                         }
                     }
 
@@ -118,10 +147,10 @@ fn recursive_regex_search(path: &str, patterns: Vec<(String, &str)>, desired_con
                         pattern: pattern.as_str().to_string(),
                         pattern_name: pattern_name.clone(),
                         groups: groups,
-                        capture: general_purpose::STANDARD.encode(&contents[full_match.start()..full_match.end()]),
+                        capture: contents[full_match.start()..full_match.end()].to_vec(),
                         capture_start: full_match.start(),
                         capture_end: full_match.end(),
-                        context: general_purpose::STANDARD.encode(&contents[context_start..context_end]),
+                        context: contents[context_start..context_end].to_vec(),
                         context_start: context_start,
                         context_end: context_end,
                     }).unwrap();
@@ -144,17 +173,37 @@ fn recursive_regex_search(path: &str, patterns: Vec<(String, &str)>, desired_con
     let mut matching_files = Vec::new();
 
     for match_obj in rx.iter() {
-        matching_files.push(match_obj);
+        let groups_as_bytes: Vec<Py<PyBytes>> = match_obj.groups
+            .iter()
+            .map(|group| PyBytes::new(py, group).into())
+            .collect();
+
+        matching_files.push(SearchMatch {
+            uuid: match_obj.uuid,
+            file_name: match_obj.file_name,
+            pattern: match_obj.pattern,
+            pattern_name: match_obj.pattern_name,
+            groups: groups_as_bytes,
+            capture: PyBytes::new(py, &match_obj.capture).into(),
+            capture_start: match_obj.capture_start,
+            capture_end: match_obj.capture_end,
+            context: PyBytes::new(py, &match_obj.context).into(),
+            context_start: match_obj.context_start,
+            context_end: match_obj.context_end
+        })
     }
 
-    Ok(matching_files)
+    Ok(SearchResult {
+        total_files_scanned: total_files_scanned,
+        matches: matching_files,
+    })
 }
 
 
 #[pymodule]
 fn mystik_core(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(recursive_regex_search, m)?)?;
-    m.add_class::<Match>()?;
+    m.add_class::<SearchMatch>()?;
 
     Ok(())
 }
