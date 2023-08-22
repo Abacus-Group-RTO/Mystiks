@@ -93,7 +93,7 @@
                     for (const term of filterTerms) {
                         const invertTerm = term.startsWith('!');
 
-                        if (finding.patternName.includes(term.substring(1)) === invertTerm) {
+                        if (finding.name.includes(term.substring(1)) === invertTerm) {
                             meetsTerms = false;
                             break;
                         }
@@ -144,7 +144,7 @@
             document.querySelector('[data-id="name-header"]').textContent = manifest.metadata.name;
 
             document.querySelector('[data-id="finding-count-header"]').textContent = `Flagged ${manifest.sorting.length} potential findings`;
-            document.querySelector('[data-id="flagged-file-count-header"]').textContent = `Flagged ${manifest.metadata.uniqueFiles} unique files`;
+            document.querySelector('[data-id="flagged-file-count-header"]').textContent = `Scanned ${manifest.metadata.totalFilesScanned} files`;
 
             const duration = manifest.metadata.completedAt - manifest.metadata.startedAt;
             document.querySelector('[data-id="duration-header"]').textContent = `Scanned over ${duration} seconds`;

@@ -17,8 +17,8 @@ class AmazonAccessKeyID(SecretFinding):
     ideal_rating = 3
 
     @classmethod
-    def get_indicators(this, context, context_start, context_end, capture, capture_start, capture_end, groups):
-        indicators = super().get_indicators(context, context_start, context_end, capture, capture_start, capture_end, groups)
+    def get_indicators(this, context, capture, capture_start, capture_end, groups):
+        indicators = super().get_indicators(context, capture, capture_start, capture_end, groups)
 
         access_key_id = capture.decode()
 
@@ -34,3 +34,6 @@ class AmazonAccessKeyID(SecretFinding):
             indicators.append(('Calculated account ID is invalid', -1))
 
         return indicators
+
+
+FINDINGS = [AmazonAccessKeyID]

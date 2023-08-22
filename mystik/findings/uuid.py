@@ -17,8 +17,8 @@ class UUID(SecretFinding):
     ideal_rating = 3
 
     @classmethod
-    def get_indicators(this, context, context_start, context_end, capture, capture_start, capture_end, groups):
-        indicators = super().get_indicators(context, context_start, context_end, capture, capture_start, capture_end, groups)
+    def get_indicators(this, context, capture, capture_start, capture_end, groups):
+        indicators = super().get_indicators(context, capture, capture_start, capture_end, groups)
 
         # We remove all dashes in order to better calculate the UUID's entropy.
         entropy = this.calculate_entropy(capture.replace(b'-', b''))
@@ -40,3 +40,6 @@ class UUID(SecretFinding):
             indicators.append(('Value does not specify a known UUID version', -1))
 
         return indicators
+
+
+FINDINGS = [UUID]

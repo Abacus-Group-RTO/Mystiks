@@ -14,3 +14,6 @@ class GoogleToken(SecretFinding):
     ]
 
     ideal_rating = 2
+
+
+FINDINGS = [GoogleToken]

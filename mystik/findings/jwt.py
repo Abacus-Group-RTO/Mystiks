@@ -21,8 +21,8 @@ class JSONWebToken(SecretFinding):
     ideal_rating = 6
 
     @classmethod
-    def get_indicators(this, context, context_start, context_end, capture, capture_start, capture_end, groups):
-        indicators = super().get_indicators(context, context_start, context_end, capture, capture_start, capture_end, groups)
+    def get_indicators(this, context, capture, capture_start, capture_end, groups):
+        indicators = super().get_indicators(context, capture, capture_start, capture_end, groups)
         is_encrypted = False
 
         try:
@@ -75,3 +75,6 @@ class JSONWebToken(SecretFinding):
             indicators.append(('Third segment is not valid JSON', 0.5))
 
         return indicators
+
+
+FINDINGS = [JSONWebToken]

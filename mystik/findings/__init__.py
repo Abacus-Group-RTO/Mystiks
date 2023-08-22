@@ -1,23 +1,25 @@
 #!/usr/bin/env python3
 from math import log2
+from pathlib import Path
+from importlib import import_module
 
 
 class Finding:
     ideal_rating = 5
 
     @classmethod
-    def get_indicators(this, context, context_start, context_end, capture, capture_start, capture_end, groups):
+    def get_indicators(this, context, capture, capture_start, capture_end, groups):
         return [('Capture matches pattern', 1)]
 
 
 class SecretFinding(Finding):
     @classmethod
-    def get_indicators(this, context, context_start, context_end, capture, capture_start, capture_end, groups):
+    def get_indicators(this, context, capture, capture_start, capture_end, groups):
         '''
             It's important to keep in mind that this function produces a
             maximum rating of +1 or a minimum rating of -0.5.
         '''
-        indicators = super().get_indicators(context, context_start, context_end, capture, capture_start, capture_end, groups)
+        indicators = super().get_indicators(context, capture, capture_start, capture_end, groups)
 
         # We start by collecting the characters surrounding the capture.
         start_character = None
@@ -66,3 +68,15 @@ class SecretFinding(Finding):
             entropy += probability * log2(probability)
 
         return -entropy
+
+
+# We automatically build out a list of available findings.
+FINDINGS = []
+
+for file in Path(__file__).parent.glob('*.py'):
+    # We skip any files that my be internally used by Python.
+    if file.name.startswith('__'):
+        continue
+
+    # We extend out the findings list with our types.
+    FINDINGS.extend(import_module(f'mystik.findings.{file.stem}').FINDINGS)
