@@ -1,0 +1,3 @@
+include mystik/*.so
+include mystik/*.dll
+recursive-include mystik/report *
