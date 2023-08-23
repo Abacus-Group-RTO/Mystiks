@@ -21,7 +21,7 @@ class JSONWebToken(SecretFinding):
     ideal_rating = 6
 
     @classmethod
-    def get_indicators(this, context, capture, capture_start, capture_end, groups):
+    def get_indicators(this, context, capture, capture_start, capture_end, groups): # noqa: C901,E261
         indicators = super().get_indicators(context, capture, capture_start, capture_end, groups)
         is_encrypted = False
 

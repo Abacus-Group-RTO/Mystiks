@@ -5,7 +5,7 @@ from pathlib import Path
 from sys import exit
 from shutil import Error as CopyError, copytree
 
-from .mystik_core import recursive_regex_search
+from .mystik_core import recursive_regex_search # noqa: F401,E261
 from .utilities import unit_size_to_bytes
 from .searcher import build_manifest
 

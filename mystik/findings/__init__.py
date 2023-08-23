@@ -42,8 +42,8 @@ class SecretFinding(Finding):
             else:
                 indicators.append(('Capture is segmented', 0.5))
         # We check whether the capture is at the start of a potentially-segmented file.
-        elif (start_character == None and end_character in b',:|\t ') or \
-        (end_character == None and start_character in b',:|\t '):
+        elif (start_character == None and end_character in b',:|\t ') \
+                or (end_character == None and start_character in b',:|\t '):
             indicators.append(('Capture appears segmented', 0.25))
         else:
             indicators.append(('Capture is not segmented', -0.5))
