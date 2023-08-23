@@ -178,10 +178,10 @@ def create_patterns(findings, include_utf16=False):
     # pattern's intended encoding and support for dynamic UTF-16 patterns.
     for finding in findings:
         for index, pattern in enumerate(finding.patterns):
-            patterns.append((f'{index}:UTF-8:{finding.name}', pattern.encode()))
+            patterns.append((f'{index}:UTF-8:{finding.name}', pattern))
 
             if include_utf16:
-                patterns.append((f'{index}:UTF-16:{finding.name}', pattern_to_utf16(pattern).encode()))
+                patterns.append((f'{index}:UTF-16:{finding.name}', pattern_to_utf16(pattern)))
 
     return patterns
 

@@ -1,14 +1,14 @@
 use num_cpus;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
+use pyo3::exceptions::{PyIOError, PyValueError};
 use pyo3::wrap_pyfunction;
+use rayon::prelude::*;
 use regex::bytes::Regex;
 use std::fs::File;
 use std::io::prelude::*;
-use std::str::from_utf8;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::channel;
-use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 use walkdir::WalkDir;
@@ -75,61 +75,104 @@ struct TemporaryMatch {
 }
 
 
-#[pyfunction]
-fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, &PyBytes)>, desired_context: Option<usize>, max_file_size: Option<usize>, max_threads: Option<usize>) -> PyResult<SearchResult> {
-    // If any of the function arguments are left blank, we assign defaults here.
-    let desired_context = desired_context.unwrap_or(128);
-    let max_file_size = max_file_size.unwrap_or(0);
-    let max_threads = max_threads.unwrap_or(num_cpus::get());
-
+fn compile_patterns(patterns: Vec<(String, String)>) -> Result<Vec<(String, Regex)>, PyErr> {
     // We compile each pattern and its tag into a vector.
-    let regex_patterns: Vec<(String, Regex)> = patterns
-        .iter()
-        .map(|(tag, pattern)| (tag.clone(), Regex::new(from_utf8(pattern.as_bytes()).unwrap()).unwrap()))
-        .collect();
+    let mut regex_patterns: Vec<(String, Regex)> = Vec::new();
 
-    // We prepare some queues for us to use between threads.
-    let (tx, rx) = channel::<TemporaryMatch>();
-    let tx = Arc::new(Mutex::new(tx));
+    for (tag, pattern) in patterns {
+        // We attempt to convert the byte string into a valid pattern, and if
+        // that fails, we raise a value error.
+        let byte_pattern = Regex::new(&pattern).map_err(|error| {
+            PyErr::new::<PyValueError, _>(format!("Failed to compile pattern: {}", error))
+        })?;
 
-    // We initialize our thread pool.
-    let mut thread_pool = Vec::new();
+        regex_patterns.push((tag, byte_pattern));
+    }
+
+    Ok::<Vec<(String, Regex)>, _>(regex_patterns)
+}
+
+
+#[pyfunction]
+fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, String)>, desired_context: Option<usize>, max_file_size: Option<usize>, max_threads: Option<usize>, skip_symlinks: Option<bool>) -> PyResult<SearchResult> {
+    // If any of the function arguments are left blank, we assign defaults here.
+    let desired_context: usize = desired_context.unwrap_or(128);
+    let max_file_size: usize = max_file_size.unwrap_or(0);
+    let max_threads: usize = max_threads.unwrap_or(num_cpus::get());
+    let skip_symlinks: bool = skip_symlinks.unwrap_or(false);
+
+    let regex_patterns = Arc::new(compile_patterns(patterns)?);
+
+    // We prepare some channels for us to use between threads.
+    let (match_sender, match_receiver) = channel();
+    let match_sender = Arc::new(Mutex::new(match_sender));
+
+    let (error_sender, error_receiver) = channel();
+    let error_sender = Arc::new(Mutex::new(error_sender));
 
     // We keep some operation statistics.
-    let mut total_files_scanned = 0;
-    let mut total_directories_scanned = 0;
+    let total_files_scanned = Arc::new(Mutex::new(0));
+    let total_directories_scanned = Arc::new(Mutex::new(0));
     let scan_started_at = SystemTime::now();
 
-    // We start walking over all the files in the target path.
-    for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
-        if !entry.file_type().is_file() {
-            if entry.file_type().is_dir() {
-                total_directories_scanned += 1;
+    let pool = rayon::ThreadPoolBuilder::new().num_threads(max_threads).build().unwrap();
+
+    // We begin executing inside the context of our thread pool.
+    pool.install(|| {
+        WalkDir::new(path).into_iter().filter_map(|e| e.ok()).par_bridge().for_each(|entry| {
+            let file_type = entry.file_type();
+
+            if file_type.is_symlink() && skip_symlinks {
+                return;
+            } else if !file_type.is_file() {
+                if file_type.is_dir() {
+                    *total_directories_scanned.lock().unwrap() += 1;
+                }
+
+                return;
             }
 
-            continue;
-        }
+            // If we've made it this far, the entry is a file.
+            *total_files_scanned.lock().unwrap() += 1;
 
-        total_files_scanned += 1;
+            // We can move onto reading the file.
+            let path = entry.path();
 
-        let tx = tx.clone();
-        let path = entry.path().to_owned();
-        let regex_patterns = regex_patterns.clone();
+            // We open the file for reading, or error if we can't.
+            let file_open_result = File::open(&path);
 
-        let thread_handle = thread::spawn(move || {
-            let mut file = File::open(&path).unwrap();
+            if file_open_result.is_err() {
+                let _ = error_sender.lock().unwrap().send(PyErr::new::<PyIOError, _>(format!("Failed to open file: {}", path.display())));
+                return;
+            }
+
+            let mut file = file_open_result.unwrap();
+
+            // Next, we try to check for the file's metadata.
+            let file_metadata_result = file.metadata();
+
+            if file_metadata_result.is_err() {
+                let _ = error_sender.lock().unwrap().send(PyErr::new::<PyIOError, _>(format!("Failed to get file metadata: {}", path.display())));
+                return;
+            }
+
+            let file_metadata = file_metadata_result.unwrap();
 
             // If the file is too big, we skip it.
-            if max_file_size > 0 && file.metadata().unwrap().len() > max_file_size.try_into().unwrap() {
+            if max_file_size > 0 && file_metadata.len() > max_file_size.try_into().unwrap() {
                 return;
             }
 
             // We read the file's contents into memory for scanning.
             let mut contents = Vec::new();
-            file.read_to_end(&mut contents).unwrap();
+
+            if file.read_to_end(&mut contents).is_err() {
+                let _ = error_sender.lock().unwrap().send(PyErr::new::<PyIOError, _>(format!("Failed to read the file: {}", path.display())));
+                return;
+            }
 
             // Time to iterate through our capture patterns!
-            for (pattern_tag, pattern) in regex_patterns {
+            for (pattern_tag, pattern) in regex_patterns.iter() {
                 for capture in pattern.captures_iter(&contents) {
                     let full_match = capture.get(0).unwrap();
 
@@ -157,11 +200,11 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, &PyByte
                     }
 
                     // We can now acquire the lock and push our results back!
-                    tx.lock().unwrap().send(TemporaryMatch {
+                    match_sender.lock().unwrap().send(TemporaryMatch {
                         uuid: Uuid::new_v4().to_string(),
                         file_name: path.display().to_string(),
                         pattern: pattern.as_str().to_string(),
-                        pattern_tag: pattern_tag.clone(),
+                        pattern_tag: pattern_tag.to_string(),
                         groups: groups,
                         capture: contents[full_match.start()..full_match.end()].to_vec(),
                         capture_start: full_match.start(),
@@ -173,26 +216,22 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, &PyByte
                 }
             }
         });
+    });
 
-        thread_pool.push(thread_handle);
+    drop(match_sender);
+    drop(error_sender);
 
-        // If our thread count is too high, we just wait on one to exit.
-        while thread_pool.len() >= max_threads {
-            let thread = thread_pool.remove(0);
-            thread.join().unwrap();
-        }
+    // If something exploded mid-search, we raise that error here.
+    if let Ok(error) = error_receiver.try_recv() {
+        return Err(error);
     }
-
-    // This waits for the queue to be released before dropping it; this is
-    // just a fancy way to join the threads together.
-    drop(tx);
 
     let scan_completed_at = SystemTime::now();
 
     // We iterate through the result queue and push those into an array.
     let mut search_matches = Vec::new();
 
-    for match_obj in rx.iter() {
+    for match_obj in match_receiver.iter() {
         let groups_as_bytes: Vec<Py<PyBytes>> = match_obj.groups
             .iter()
             .map(|group| PyBytes::new(py, group).into())
@@ -212,6 +251,9 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, &PyByte
             context_end: match_obj.context_end
         })
     }
+
+    let total_files_scanned = *total_files_scanned.lock().unwrap();
+    let total_directories_scanned = *total_directories_scanned.lock().unwrap();
 
     Ok(SearchResult {
         uuid: Uuid::new_v4().to_string(),

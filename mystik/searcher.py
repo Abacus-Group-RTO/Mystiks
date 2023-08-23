@@ -59,7 +59,7 @@ def build_manifest(path, target_findings=None, desired_context=None, max_file_si
                 groups=match.groups
             )
 
-        # We calcualte each finding's rating here. If the rating is too low,
+        # We calculate each finding's rating here. If the rating is too low,
         # we skip this finding and remove it.
         rating = sum([delta for _, delta in indicators])
 
