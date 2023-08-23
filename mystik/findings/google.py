@@ -10,7 +10,7 @@ class GoogleToken(SecretFinding):
     ]
 
     patterns = [
-        'AIza[A-Za-z0-9\-_]{35}'
+        r'AIza[A-Za-z0-9\-_]{35}'
     ]
 
     ideal_rating = 2

@@ -11,7 +11,7 @@ class AmazonAccessKeyID(SecretFinding):
     ]
 
     patterns = [
-        'A[SK]IA[A-Z2-7]{16}'
+        r'A[SK]IA[A-Z2-7]{16}'
     ]
 
     ideal_rating = 3

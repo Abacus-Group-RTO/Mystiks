@@ -11,7 +11,7 @@ class UUID(SecretFinding):
     ]
 
     patterns = [
-        '(?i)[a-z0-9]{8}\-([0-9a-z]{4}\-){3}[0-9a-z]{12}'
+        r'(?i)[a-z0-9]{8}\-([0-9a-z]{4}\-){3}[0-9a-z]{12}'
     ]
 
     ideal_rating = 3

@@ -15,7 +15,7 @@ class JSONWebToken(SecretFinding):
     ]
 
     patterns = [
-        '(?i)([a-z0-9\-_]{3,})\.([a-z0-9\-_]{3,})\.([a-z0-9\-_]*)'
+        r'(?i)([a-z0-9\-_]{3,})\.([a-z0-9\-_]{3,})\.([a-z0-9\-_]*)'
     ]
 
     ideal_rating = 6
@@ -25,6 +25,7 @@ class JSONWebToken(SecretFinding):
         indicators = super().get_indicators(context, capture, capture_start, capture_end, groups)
         is_encrypted = False
 
+        # We try to parse the first chunk as a JWT header.
         try:
             json = standard_b64decode(groups[0] + b'==').decode()
             header = from_json(json)
@@ -46,6 +47,9 @@ class JSONWebToken(SecretFinding):
         except JSONDecodeError:
             indicators.append(('First segment is not valid JSON', -2))
 
+        # We move onto the second chunk, which should be either JSON data or
+        # encrypted content. If the content is encrypted, we should have
+        # been told so in the header.
         try:
             json = standard_b64decode(groups[1] + b'==').decode()
             payload = from_json(json)
@@ -65,6 +69,8 @@ class JSONWebToken(SecretFinding):
             else:
                 indicators.append(('Second segment is not valid unicode or JSON', -1))
 
+        # The third chunk is not always guaranteed to exist, but if it is
+        # does, this chunk should be signature data.
         try:
             json = standard_b64decode(groups[2] + b'==').decode()
             from_json(json)

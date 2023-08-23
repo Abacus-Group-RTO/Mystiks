@@ -89,7 +89,7 @@ def build_manifest(path, target_findings=None, desired_context=None, max_file_si
 
         # If the finding hasn't been added to the descriptions table, we add
         # that in now.
-        if not finding.name in manifest['descriptions']:
+        if finding.name not in manifest['descriptions']:
             manifest['descriptions'][finding.name] = finding.description
 
     # We include a pre-computed sorting of the values, just to save time later.
