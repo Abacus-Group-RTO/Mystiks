@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from . import SecretFinding
+from . import SecretFinding, get_shannon_entropy
 
 
 class UUID(SecretFinding):
@@ -21,7 +21,7 @@ class UUID(SecretFinding):
         indicators = super().get_indicators(context, capture, capture_start, capture_end, groups)
 
         # We remove all dashes in order to better calculate the UUID's entropy.
-        entropy = this.calculate_entropy(capture.replace(b'-', b''))
+        entropy = get_shannon_entropy(capture.replace(b'-', b''))
 
         # If the UUID's entropy is significantly low, due to repetitions of the
         # same number for instance, it is likely not secret.

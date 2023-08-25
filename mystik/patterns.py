@@ -166,7 +166,7 @@ def pattern_to_utf16(pattern):
     return utf16_pattern
 
 
-def create_patterns(findings, include_utf16=False):
+def create_patterns(findings, include_utf16=False, use_filters=True):
     '''
         Given a list of findings, this function creates a list of pattern tags
         and patterns. Dynamic creation of UTF-16 patterns is also supported,
@@ -178,10 +178,20 @@ def create_patterns(findings, include_utf16=False):
     # pattern's intended encoding and support for dynamic UTF-16 patterns.
     for finding in findings:
         for index, pattern in enumerate(finding.patterns):
-            patterns.append((f'{index}:UTF-8:{finding.name}', pattern))
+            filter_function = getattr(finding, 'should_filter_match', None)
+
+            patterns.append((
+                f'{index}:UTF-8:{finding.name}',
+                pattern,
+                filter_function if use_filters else None
+            ))
 
             if include_utf16:
-                patterns.append((f'{index}:UTF-16:{finding.name}', pattern_to_utf16(pattern)))
+                patterns.append((
+                    f'{index}:UTF-16:{finding.name}',
+                    pattern_to_utf16(pattern),
+                    filter_function if use_filters else None
+                ))
 
     return patterns
 

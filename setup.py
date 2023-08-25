@@ -11,6 +11,9 @@ setup(
             'mystik = mystik:main'
         ]
     },
+    install_requires=[
+        'regex==2023.8.8'
+    ],
     include_package_data=True,
     author='Dennis Carlson',
     author_email='dcarlson@gotham-security.com',

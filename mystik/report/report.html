@@ -82,6 +82,7 @@
             const filterTerms = [];
 
             function refreshFindingsWithFilters() {
+                // TODO: Migrate this to asynchronous code.
                 let newFindings = {};
                 let newSorting = [];
 
@@ -92,9 +93,39 @@
 
                     for (const term of filterTerms) {
                         const invertTerm = term.startsWith('!');
+                        let [attribute, target] = term.split(':');
 
-                        if (finding.name.includes(term.substring(1)) === invertTerm) {
-                            meetsTerms = false;
+                        if (invertTerm) {
+                            attribute = attribute.substring(1);
+                        }
+
+                        attribute = attribute.toLowerCase();
+
+                        switch (attribute) {
+                            case 'name':
+                                if (finding.name.includes(target) === invertTerm) {
+                                    meetsTerms = false;
+                                }
+
+                                break;
+                            case 'value':
+                                const valueByteArray = utilities.base64ToByteArray(finding.capture);
+                                const value = utilities.byteArrayToString(valueByteArray);
+
+                                if (value.includes(target) === invertTerm) {
+                                    meetsTerms = false;
+                                }
+
+                                break;
+                            case 'file':
+                                if (finding.fileName.includes(target) === invertTerm) {
+                                    meetsTerms = false;
+                                }
+
+                                break;
+                        }
+
+                        if (!meetsTerms) {
                             break;
                         }
                     }

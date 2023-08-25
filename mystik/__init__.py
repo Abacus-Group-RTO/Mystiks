@@ -2,8 +2,9 @@
 from argparse import ArgumentParser
 from json import dumps as to_json
 from pathlib import Path
-from sys import exit
 from shutil import Error as CopyError, copytree
+from sys import exit
+from time import time
 
 from .mystik_core import recursive_regex_search # noqa: F401,E261
 from .utilities import unit_size_to_bytes
@@ -53,7 +54,7 @@ def main():
         include_utf16=arguments.utf16
     )
 
-    output_path = Path(arguments.output or 'Mystik-{}'.format(manifest['metadata']['uuid']))
+    output_path = Path(arguments.output or 'Mystik-{}'.format(round(time())))
     output_path.mkdir(exist_ok=True)
 
     if 'HTML' in output_formats:

@@ -235,7 +235,7 @@ function refreshFindings(findings, descriptions, sorting) {
         createFinding(
             uuid,
             finding.fileName,
-            finding.cleanedCapture || finding.capture,
+            finding.capture,
             finding.rating,
             finding.idealRating,
             [finding.pattern],
