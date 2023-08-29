@@ -71,6 +71,12 @@ def get_shannon_entropy(string):
     return -entropy
 
 
+def get_relative_shannon_entropy(string):
+    entropy = get_shannon_entropy(string)
+    max_entropy = log2(len(set(string)))
+    return entropy / max_entropy
+
+
 def get_sequence_rating(string, max_distance=1):
     last_character = string[0]
     sequences = 0

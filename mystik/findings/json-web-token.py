@@ -4,7 +4,9 @@ from json import loads as from_json
 from json.decoder import JSONDecodeError
 from binascii import Error as BinError
 
-from . import SecretFinding
+from . import SecretFinding, get_pronounceable_rating, \
+    get_shannon_entropy, get_sequence_rating, get_character_counts, \
+    get_relative_shannon_entropy
 
 
 class JSONWebToken(SecretFinding):
@@ -19,6 +21,29 @@ class JSONWebToken(SecretFinding):
     ]
 
     ideal_rating = 6
+
+    @classmethod
+    def should_filter_match(this, match):
+        capture = match.capture.decode()
+
+        # If the match appears to be some kind of sequence, we skip it.
+        if get_sequence_rating(capture) > 0.5:
+            return True
+
+        # We try to decode the header section first.
+        try:
+            header = from_json(standard_b64decode(match.groups[0] + b'==').decode())
+        except:
+            return True
+
+        # We try to decode the data section next.
+        try:
+            data = from_json(standard_b64decode(match.groups[1] + b'==').decode())
+        except:
+            if 'enc' not in header:
+                return True
+
+        return False
 
     @classmethod
     def get_indicators(this, context, capture, capture_start, capture_end, groups): # noqa: C901,E261

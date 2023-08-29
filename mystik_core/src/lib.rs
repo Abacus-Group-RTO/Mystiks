@@ -128,7 +128,9 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, String,
                 let file_open_result = File::open(&path);
 
                 if file_open_result.is_err() {
-                    let _ = error_sender.lock().unwrap().send(PyErr::new::<PyIOError, _>(format!("Failed to open file: {}", path.display())));
+                    error_sender.lock().unwrap().send(
+                        PyErr::new::<PyIOError, _>(format!("Failed to open file: {}", path.display()))
+                    ).unwrap();
                     return;
                 }
 
@@ -138,7 +140,9 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, String,
                 let file_metadata_result = file.metadata();
 
                 if file_metadata_result.is_err() {
-                    let _ = error_sender.lock().unwrap().send(PyErr::new::<PyIOError, _>(format!("Failed to get file metadata: {}", path.display())));
+                    error_sender.lock().unwrap().send(
+                        PyErr::new::<PyIOError, _>(format!("Failed to get file metadata: {}", path.display()))
+                    ).unwrap();
                     return;
                 }
 
@@ -153,7 +157,9 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, String,
                 let mut contents = Vec::new();
 
                 if file.read_to_end(&mut contents).is_err() {
-                    let _ = error_sender.lock().unwrap().send(PyErr::new::<PyIOError, _>(format!("Failed to read the file: {}", path.display())));
+                    error_sender.lock().unwrap().send(
+                        PyErr::new::<PyIOError, _>(format!("Failed to read the file: {}", path.display()))
+                    ).unwrap();
                     return;
                 }
 
@@ -218,8 +224,10 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, String,
                             });
 
                             if filter_result.is_err() {
-                                let _ = error_sender.lock().unwrap().send(PyErr::new::<PyRuntimeError, _>(format!("Failed to filter the finding: {}", pattern_tag.to_string())));
-                                return;
+                                error_sender.lock().unwrap().send(
+                                    PyErr::new::<PyRuntimeError, _>(format!("Failed to filter the finding: {}", pattern_tag.to_string()))
+                                ).unwrap();
+                                continue;
                             }
 
                             // Technically, this conversion can fail. However, if done
@@ -228,7 +236,7 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, String,
                             let is_filtered: bool = filter_result.unwrap();
 
                             if is_filtered {
-                                return;
+                                continue;
                             }
                         }
 
