@@ -9,14 +9,21 @@ name = "mystik_core"
 crate-type = ["cdylib"]
 
 [dependencies]
+base64 = "0.21.4"
 num_cpus = "1.16.0"
 pyo3 = "0.19.0"
+rand_core = "0.6.4"
 rayon = "1.7.0"
 regex = "1.9.1"
 walkdir = "2.3.3"
 
-[dependencies.uuid]
-version = "1.4.1"
+[dependencies.rand]
+version = "0.8.5"
 features = [
-    "v4",
+    "getrandom",
+    "std"
 ]
+
+[profile.profiling]
+inherits = "release"
+debug = true

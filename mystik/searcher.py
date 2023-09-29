@@ -16,6 +16,14 @@ def build_manifest(path, target_findings=None, desired_context=None, max_file_si
     search_result = recursive_regex_search(
         path=str(path),
         patterns=patterns,
+        excluded_file_patterns=[
+            r'(?i)^.+\.svg$',
+            r'(?i)^.+\.png$',
+            r'(?i)^.+\.gif$',
+            r'(?i)^.+\.jpeg$',
+            r'(?i)^.+\.jpg$',
+            r'(?i)^.+\.ttf$',
+        ],
         desired_context=desired_context,
         max_file_size=max_file_size,
         max_threads=max_threads
@@ -63,7 +71,7 @@ def build_manifest(path, target_findings=None, desired_context=None, max_file_si
         # we skip this finding and remove it.
         rating = sum([delta for _, delta in indicators])
 
-        if rating < 0:
+        if rating < getattr(finding, 'min_rating', 0):
             continue
 
         # We can now create a manifest entry, yay!

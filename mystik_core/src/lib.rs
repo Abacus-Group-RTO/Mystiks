@@ -1,4 +1,6 @@
 use num_cpus;
+use base64::{Engine as _, engine::general_purpose};
+use rand_core::{RngCore, OsRng};
 use pyo3::prelude::*;
 use pyo3::PyObject;
 use pyo3::types::{PyBytes, PyTuple};
@@ -6,12 +8,12 @@ use pyo3::exceptions::{PyIOError, PyValueError, PyRuntimeError};
 use pyo3::wrap_pyfunction;
 use rayon::prelude::*;
 use regex::bytes::Regex;
+use regex::Regex as TextRegex;
 use std::fs::File;
 use std::io::prelude::*;
 use std::sync::{Arc, Mutex};
 use std::sync::mpsc::channel;
 use std::time::{SystemTime, UNIX_EPOCH};
-use uuid::Uuid;
 use walkdir::WalkDir;
 
 
@@ -60,6 +62,13 @@ pub struct SearchMatch {
 }
 
 
+fn generate_token() -> String {
+    let mut buffer: [u8; 16] = [0; 16];
+    OsRng.fill_bytes(&mut buffer);
+    return general_purpose::URL_SAFE_NO_PAD.encode(buffer);
+}
+
+
 fn compile_patterns(patterns: Vec<(String, String, Option<PyObject>)>) -> Result<Vec<(String, Regex, Option<PyObject>)>, PyErr> {
     // We compile each pattern and its tag into a vector.
     let mut regex_patterns: Vec<(String, Regex, Option<PyObject>)> = Vec::new();
@@ -79,7 +88,7 @@ fn compile_patterns(patterns: Vec<(String, String, Option<PyObject>)>) -> Result
 
 
 #[pyfunction]
-fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, String, Option<PyObject>)>, desired_context: Option<usize>, max_file_size: Option<usize>, max_threads: Option<usize>, skip_symlinks: Option<bool>) -> PyResult<SearchResult> {
+fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, String, Option<PyObject>)>, excluded_file_patterns: Option<Vec<String>>, desired_context: Option<usize>, max_file_size: Option<usize>, max_threads: Option<usize>, skip_symlinks: Option<bool>) -> PyResult<SearchResult> {
     // If any of the function arguments are left blank, we assign defaults here.
     let desired_context: usize = desired_context.unwrap_or(128);
     let max_file_size: usize = max_file_size.unwrap_or(0);
@@ -87,6 +96,18 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, String,
     let skip_symlinks: bool = skip_symlinks.unwrap_or(false);
 
     let regex_patterns = Arc::new(compile_patterns(patterns)?);
+
+    let mut exclude_patterns = Vec::new();
+
+    if excluded_file_patterns.is_some() {
+        for pattern in excluded_file_patterns.unwrap().iter() {
+            let pattern = TextRegex::new(&pattern).map_err(|error| {
+                PyErr::new::<PyValueError, _>(format!("Failed to compile pattern: {}", error))
+            })?;
+
+            exclude_patterns.push(pattern);
+        }
+    }
 
     // We prepare some channels for us to use between threads.
     let (match_sender, match_receiver) = channel();
@@ -105,7 +126,22 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, String,
     // We begin executing inside the context of our thread pool.
     py.allow_threads(|| {
         pool.install(|| {
-            WalkDir::new(path).into_iter().filter_map(|e| e.ok()).par_bridge().for_each(|entry| {
+            WalkDir::new(path).into_iter().filter_map(|e| e.ok())
+            .filter_map(|entry| {
+                if exclude_patterns.len() == 0 {
+                    return Some(entry);
+                }
+
+                let path = entry.path().to_string_lossy().into_owned();
+
+                for pattern in exclude_patterns.iter() {
+                    if pattern.is_match(&path) {
+                        return None;
+                    }
+                }
+
+                return Some(entry);
+            }).par_bridge().for_each(|entry| {
                 let file_type = entry.file_type();
 
                 if file_type.is_symlink() && skip_symlinks {
@@ -197,7 +233,7 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, String,
 
                         let match_obj = Python::with_gil(|py| {
                             Py::new(py, SearchMatch {
-                                uuid: Uuid::new_v4().to_string(),
+                                uuid: generate_token(),
                                 file_name: path.display().to_string(),
                                 pattern: pattern.as_str().to_string(),
                                 pattern_tag: pattern_tag.to_string(),
@@ -264,7 +300,7 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, String,
     let total_directories_scanned = *total_directories_scanned.lock().unwrap();
 
     Ok(SearchResult {
-        uuid: Uuid::new_v4().to_string(),
+        uuid: generate_token(),
         scan_started_at: scan_started_at.duration_since(UNIX_EPOCH).unwrap().as_secs(),
         scan_completed_at: scan_completed_at.duration_since(UNIX_EPOCH).unwrap().as_secs(),
         total_files_scanned: total_files_scanned,

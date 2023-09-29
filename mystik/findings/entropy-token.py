@@ -1,10 +1,28 @@
 #!/usr/bin/env python3
-from regex import search as search_regex
+from regex import compile as RegEx, search as search_regex
 
 from . import SecretFinding, get_pronounceable_rating, \
     get_shannon_entropy, get_sequence_rating, get_character_counts, \
     get_relative_shannon_entropy
 
+from .utilities.gibberish import load_model, is_gibberish
+
+
+_GIBBERISH_MODEL = load_model()
+_HEX_PATTERN = RegEx(r'(?i)^[a-f0-9]+$')
+_URL_PATTERNS = [
+    # This should catch patterns that may not specify a TLD, but DO
+    # specify some kind of protocol (e.g. https://, sftp:// with
+    # localhost, machine-01).
+    RegEx(r'(?i)(?:[a-z0-9]+)?://(?:[a-z0-9\-\.]+)(?:/[a-z0-9\-\+_\.%/?:&=\[\]{}#]*)?'),
+
+    # This should catch patterns that may not specify a protocol, but
+    # DO specify some kind of TLD (e.g. example.org without
+    # necessarily having https://).
+    RegEx(r'(?i)^(?:(?:[a-z0-9]+)?://)?(?:(?:[a-z0-9\-]+\.){1,}[a-z0-9\-]+)(?:/[a-z0-9\-\+_\.%/?:&=\[\]{}#]*)?$')
+]
+_PATH_REGEX = RegEx(r'(?i)^/?(?:[a-z0-9\-\+_\. :$]+/?){1,}$')
+_SPLIT_REGEX = RegEx(r'(?i)^([a-z0-9\-_]*?[=:])[\'"]?([a-z0-9_=\.\-\+?!@#$%^&*/:]{8,})[\'"]?$')
 
 class EntropyToken(SecretFinding):
     name = 'Entropy Token'
@@ -15,14 +33,41 @@ class EntropyToken(SecretFinding):
     ]
 
     patterns = [
-        r'(?i)[a-z0-9_=\.\-\+?!@#$%^&*/:]{8,}'
+        r'(?i)[a-z0-9_=\.\-\+?!@#$%^&*/:{}\[\]]{8,}'
     ]
 
     ideal_rating = 8
+    min_rating = 3
+
+    @classmethod
+    def try_to_separate(this, capture):
+        match = _SPLIT_REGEX.search(capture)
+
+        if not match:
+            return None
+
+        key = match.group(1)
+        value = match.group(2)
+
+        if is_gibberish(key, _GIBBERISH_MODEL):
+            return None
+
+        return value
 
     @classmethod
     def should_filter_match(this, match):
         capture = match.capture.decode()
+        capture = this.try_to_separate(capture) or capture
+
+        # if len(capture) % 4 != 0:
+        #     return True
+
+        if not is_gibberish(capture, _GIBBERISH_MODEL):
+            return True
+
+        # If the match appears to be some kind of sequence, we skip it.
+        if get_sequence_rating(capture) > 0.5:
+            return True
 
         # If the match is in a shared object and the capture starts with "_Z",
         # it is likely an artifact and not important.
@@ -31,37 +76,23 @@ class EntropyToken(SecretFinding):
                 return True
 
         # If the match is entirely a hex value, we filter it.
-        if search_regex(r'(?i)^[a-f0-9]+$', capture):
+        if _HEX_PATTERN.search(capture):
             return True
 
         # If it could be a URL or path, we check it out.
         if '/' in capture:
-            url_patterns = [
-                # This should catch patterns that may not specify a TLD, but DO
-                # specify some kind of protocol (e.g. https://, sftp:// with
-                # localhost, machine-01).
-                r'(?i)(?:[a-z0-9]+)?://(?:[a-z0-9\-\.]+)(?:/[a-z0-9\-\+_\.%/?:&=\[\]{}#]*)?',
-
-                # This should catch patterns that may not specify a protocol, but
-                # DO specify some kind of TLD (e.g. example.org without
-                # necessarily having https://).
-                r'(?i)^(?:(?:[a-z0-9]+)?://)?(?:(?:[a-z0-9\-]+\.){1,}[a-z0-9\-]+)(?:/[a-z0-9\-\+_\.%/?:&=\[\]{}#]*)?$'
-            ]
-
             # If the match looks like a URL, we filter it.
-            for pattern in url_patterns:
+            for pattern in _URL_PATTERNS:
                 match = search_regex(pattern, capture)
 
                 if match and len(match.group()) > len(capture) * 0.5:
                     return True
 
             # If the match looks like a path, we exclude it.
-            if search_regex(r'(?i)^/?(?:[a-z0-9\-\+_\. :$]+/?){1,}$', capture):
+            if search_regex(_PATH_REGEX, capture):
                 return True
 
-        # If the match appears to be some kind of sequence, we skip it.
-        if get_sequence_rating(capture) > 0.5:
-            return True
+        # print(capture, match.file_name)
 
         return False
 

@@ -81,7 +81,7 @@
             const filters = document.querySelector('[data-id="filters"]');
             const filterTerms = [];
 
-            function refreshFindingsWithFilters() {
+            async function refreshFindingsWithFilters() {
                 // TODO: Migrate this to asynchronous code.
                 let newFindings = {};
                 let newSorting = [];
@@ -101,24 +101,28 @@
 
                         attribute = attribute.toLowerCase();
 
+                        const valueByteArray = utilities.base64ToByteArray(finding.capture);
+                        const value = utilities.byteArrayToString(valueByteArray);
+
+                        const nameMatches = (finding.fileName.includes(target) === invertTerm);
+                        const valueMatches = (value.includes(target) === invertTerm);
+                        const fileMatches = (finding.fileName.includes(target) === invertTerm);
+
                         switch (attribute) {
                             case 'name':
-                                if (finding.name.includes(target) === invertTerm) {
+                                if (nameMatches) {
                                     meetsTerms = false;
                                 }
 
                                 break;
                             case 'value':
-                                const valueByteArray = utilities.base64ToByteArray(finding.capture);
-                                const value = utilities.byteArrayToString(valueByteArray);
-
-                                if (value.includes(target) === invertTerm) {
+                                if (valueMatches) {
                                     meetsTerms = false;
                                 }
 
                                 break;
                             case 'file':
-                                if (finding.fileName.includes(target) === invertTerm) {
+                                if (fileMatches) {
                                     meetsTerms = false;
                                 }
 
@@ -161,7 +165,25 @@
                 addFilter(searchBox.value);
                 searchBox.value = '';
                 refreshFindingsWithFilters();
-            })
+            });
+
+            const pageButtonFirst = document.querySelector('[data-id="page-button--first"]');
+
+            pageButtonFirst.addEventListener('click', (event) => {
+                event.preventDefault();
+
+                utilities.setParameter('pageIndex', pageButtonFirst.getAttribute('data-page'));
+                refreshFindingsWithFilters();
+            });
+
+            const pageButtonLast = document.querySelector('[data-id="page-button--last"]');
+
+            pageButtonLast.addEventListener('click', (event) => {
+                event.preventDefault();
+
+                utilities.setParameter('pageIndex', pageButtonLast.getAttribute('data-page'));
+                refreshFindingsWithFilters();
+            });
         });
     </script>
 

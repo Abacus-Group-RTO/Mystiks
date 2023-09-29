@@ -256,7 +256,7 @@ function refreshFindings(findings, descriptions, sorting) {
     const buttonContainer = document.querySelector('[data-id="page-button-container"]');
     buttonContainer.replaceChildren();
 
-    for (let index = buttonStartIndex; index < buttonStopIndex; index++) {
+    for (let index = buttonStartIndex; index <= buttonStopIndex; index++) {
         const button = buttonTemplate.content.firstElementChild.cloneNode(true);
         button.textContent = index + 1;
 
@@ -274,6 +274,12 @@ function refreshFindings(findings, descriptions, sorting) {
 
         buttonContainer.appendChild(button);
     }
+
+    const pageButtonFirst = document.querySelector('[data-id="page-button--first"]');
+    pageButtonFirst.setAttribute('data-page', 0)
+
+    const pageButtonLast = document.querySelector('[data-id="page-button--last"]');
+    pageButtonLast.setAttribute('data-page', totalPages)
 
     censorship.refreshCensorship();
 }

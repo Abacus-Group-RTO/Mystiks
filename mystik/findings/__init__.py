@@ -44,7 +44,7 @@ class SecretFinding(Finding):
             else:
                 indicators.append(('Capture is segmented', 0.5))
         # We check whether the capture is defined as a value. TODO: Make this a regex.
-        elif (start_character == ord('=') and end_character in b';\n\\'):
+        elif (start_character == ord('=') and end_character in b';\n\\ ,'):
             indicators.append(('Capture appears defined', 0.25))
         # We check whether the capture is at the start of a potentially-segmented file.
         elif (start_character == None and end_character in SEGMENTATION_LETTERS) \
