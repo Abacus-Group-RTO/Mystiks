@@ -104,7 +104,7 @@
                         const valueByteArray = utilities.base64ToByteArray(finding.capture);
                         const value = utilities.byteArrayToString(valueByteArray);
 
-                        const nameMatches = (finding.fileName.includes(target) === invertTerm);
+                        const nameMatches = (finding.name.includes(target) === invertTerm);
                         const valueMatches = (value.includes(target) === invertTerm);
                         const fileMatches = (finding.fileName.includes(target) === invertTerm);
 

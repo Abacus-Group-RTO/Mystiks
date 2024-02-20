@@ -2,11 +2,10 @@
 from argparse import ArgumentParser
 from json import dumps as to_json
 from pathlib import Path
-from shutil import Error as CopyError, copytree
+from shutil import Error as CopyError, copytree, rmtree
 from sys import exit
 from time import time
 
-from .mystik_core import recursive_regex_search # noqa: F401,E261
 from .utilities import unit_size_to_bytes
 from .searcher import build_manifest
 
@@ -42,16 +41,41 @@ def main():
             print('[-] You specified an invalid output format:', output_format)
             exit()
 
+    max_file_size = unit_size_to_bytes(arguments.limit)
+    file_name_map = None
+    delete_after = False
+
+    if target_path.is_file() and target_path.suffix.lower() == '.xml':
+        try:
+            from bs4 import BeautifulSoup
+            from .burp import is_burp_xml, extract_requests
+
+            file_size = target_path.stat().st_size
+
+            if file_size < max_file_size:
+                with open(target_path, 'r') as file:
+                    soup = BeautifulSoup(file.read(), features='xml')
+
+                if is_burp_xml(soup):
+                    target_path, file_name_map = extract_requests(soup)
+                    delete_after = True
+            else:
+                print('[-] The supplied file is too big:', file_size, '>', max_file_size)
+                exit()
+        except ImportError:
+            print('[-] To extract requests from Burp XML, please install BeautifulSoup4 (and LXML): pip install beautifulsoup4 lxml')
+
     # This is where the majority of work happens.
-    print('[i] Searching for findings, this may take a while.')
+    print('[i] Searching for findings, this may take a while:', target_path)
 
     manifest = build_manifest(
         path=target_path,
         desired_context=arguments.context,
-        max_file_size=unit_size_to_bytes(arguments.limit),
+        max_file_size=max_file_size,
         max_threads=arguments.threads,
         manifest_name=arguments.name,
-        include_utf16=arguments.utf16
+        include_utf16=arguments.utf16,
+        file_name_map=file_name_map
     )
 
     output_path = Path(arguments.output or 'Mystik-{}'.format(round(time())))
@@ -74,6 +98,9 @@ def main():
             file.write(to_json(manifest, indent=' ' * 4))
 
         print('[+] A JSON copy of the report has been saved to:', output_path.resolve())
+
+    if delete_after:
+        rmtree(target_path)
 
     print('[+] All operations have finished!')
     print('[i] Findings discovered:', len(manifest['findings']))

@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 from base64 import standard_b64encode
+from pathlib import Path
 
 from .findings import FINDINGS
 from .mystik_core import recursive_regex_search
 from .patterns import create_patterns, clean_match_utf16
 
 
-def build_manifest(path, target_findings=None, desired_context=None, max_file_size=None, max_threads=None, manifest_name=None, include_utf16=False):
+def build_manifest(path, target_findings=None, desired_context=None, max_file_size=None, max_threads=None, manifest_name=None, include_utf16=False, file_name_map=None):
     target_findings = target_findings or FINDINGS
 
     # We prepare the RegEx patterns for searching.
@@ -74,9 +75,19 @@ def build_manifest(path, target_findings=None, desired_context=None, max_file_si
         if rating < getattr(finding, 'min_rating', 0):
             continue
 
+        if file_name_map:
+            file_name = file_name_map.get(Path(match.file_name).stem.split('-')[0], match.file_name)
+
+            if 'request' in match.file_name:
+                file_name = f'Request -> {file_name}'
+            elif 'response' in match.file_name:
+                file_name = f'Response <- {file_name}'
+        else:
+            file_name = match.file_name
+
         # We can now create a manifest entry, yay!
         manifest['findings'][match.uuid] = {
-            'fileName': match.file_name,
+            'fileName': file_name,
             'groups': [standard_b64encode(group).decode() for group in match.groups],
             'context': standard_b64encode(match.context).decode(),
             'contextStart': match.context_start,

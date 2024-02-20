@@ -40,7 +40,7 @@ class JSONWebToken(SecretFinding):
         try:
             data = from_json(standard_b64decode(match.groups[1] + b'==').decode())
         except:
-            if 'enc' not in header:
+            if not isinstance(header, dict) or not 'enc' in header:
                 return True
 
         return False
