@@ -15,7 +15,7 @@ def is_burp_xml(soup):
 
 
 def extract_requests(soup):
-    temporary_folder = Path(mkdtemp(), delete=False)
+    temporary_folder = Path(mkdtemp())
     file_name_map = {}
 
     for item in soup.find_all('item'):
