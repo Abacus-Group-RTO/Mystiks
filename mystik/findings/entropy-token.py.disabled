@@ -92,7 +92,7 @@ class EntropyToken(SecretFinding):
             if search_regex(_PATH_REGEX, capture):
                 return True
 
-        # print(capture, match.file_name)
+        print(capture, match.file_name)
 
         return False
 
