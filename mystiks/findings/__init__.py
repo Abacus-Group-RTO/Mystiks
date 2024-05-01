@@ -175,7 +175,7 @@ for file in Path(__file__).parent.glob('*.py'):
         continue
 
     # We extend out the findings list with our types.
-    module_findings = getattr(import_module(f'mystik.findings.{file.stem}'), 'FINDINGS', None)
+    module_findings = getattr(import_module(f'mystiks.findings.{file.stem}'), 'FINDINGS', None)
 
     if module_findings:
         FINDINGS.extend(module_findings)

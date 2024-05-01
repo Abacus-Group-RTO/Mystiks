@@ -139,7 +139,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "mystik_core"
+name = "mystiks_core"
 version = "1.0.0"
 dependencies = [
  "base64",

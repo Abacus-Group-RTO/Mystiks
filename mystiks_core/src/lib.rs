@@ -311,7 +311,7 @@ fn recursive_regex_search(py: Python, path: &str, patterns: Vec<(String, String,
 
 
 #[pymodule]
-fn mystik_core(_py: Python, m: &PyModule) -> PyResult<()> {
+fn mystiks_core(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(recursive_regex_search, m)?)?;
     m.add_class::<SearchMatch>()?;
 

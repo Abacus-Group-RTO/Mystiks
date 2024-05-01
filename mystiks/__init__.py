@@ -14,7 +14,7 @@ def main():
     parser = ArgumentParser(description='Searches the given path for findings and outputs a report')
     parser.add_argument('path', help='The path to search for findings in')
     parser.add_argument('-n', '--name', help='The name of the report (Default: The target path\'s folder name)')
-    parser.add_argument('-o', '--output', help='The path to save the report into (Default: Mystik-<Report UUID>)')
+    parser.add_argument('-o', '--output', help='The path to save the report into (Default: Mystiks-<Report UUID>)')
     parser.add_argument('-l', '--limit', default='500MB', help='The maximum size a searchable file can be (Default: 500MB)')
     parser.add_argument('-t', '--threads', type=int, help='The amount of threads to use for searching (Default: Count of CPU cores)')
     parser.add_argument('-c', '--context', type=int, default=128, help='The amount of context to capture (Default: 128 bytes)')
@@ -78,7 +78,7 @@ def main():
         file_name_map=file_name_map
     )
 
-    output_path = Path(arguments.output or 'Mystik-{}'.format(round(time())))
+    output_path = Path(arguments.output or 'Mystiks-{}'.format(round(time())))
     output_path.mkdir(exist_ok=True)
 
     if 'HTML' in output_formats:

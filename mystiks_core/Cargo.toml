@@ -1,11 +1,11 @@
 [package]
-name = "mystik_core"
+name = "mystiks_core"
 version = "1.0.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
-name = "mystik_core"
+name = "mystiks_core"
 crate-type = ["cdylib"]
 
 [dependencies]

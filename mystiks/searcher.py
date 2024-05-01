@@ -3,7 +3,7 @@ from base64 import standard_b64encode
 from pathlib import Path
 
 from .findings import FINDINGS
-from .mystik_core import recursive_regex_search
+from .mystiks_core import recursive_regex_search
 from .patterns import create_patterns, clean_match_utf16
 
 

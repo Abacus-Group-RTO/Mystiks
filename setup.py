@@ -3,12 +3,12 @@ from setuptools import setup, find_packages
 
 
 setup(
-    name='mystik',
+    name='mystiks',
     version='1.0.0',
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'mystik = mystik:main'
+            'mystiks = mystiks:main'
         ]
     },
     install_requires=[
@@ -20,7 +20,7 @@ setup(
     description='A Python-based, Rust-core secret searching tool ',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
-    url='https://github.com/GoVanguard/Mystik',
+    url='https://github.com/GoVanguard/Mystiks',
     license='MIT',
     classifiers=[
         'License :: OSI Approved :: MIT License',

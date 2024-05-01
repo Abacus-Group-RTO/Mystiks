@@ -26,7 +26,7 @@ jobs:
 
     - name: Change directory and set up Rust Toolchain
       run: |
-        cd mystik_core
+        cd mystiks_core
         echo "Working directory: $PWD"
         rustup toolchain install stable
         rustup default stable
@@ -41,13 +41,13 @@ jobs:
     - name: Lint with flake8
       run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
-    - name: Compile Mystik Core
-      working-directory: ./mystik_core
+    - name: Compile Mystiks Core
+      working-directory: ./mystiks_core
       run: |
         python_release=${{ matrix.python-version }}
         python_release=${python_release/./}
         maturin build --release --strip
-        cp ./target/release/libmystik_core.so ../mystik/mystik_core.cpython-${python_release}-x86_64-linux-gnu.so
+        cp ./target/release/libmystiks_core.so ../mystiks/mystiks_core.cpython-${python_release}-x86_64-linux-gnu.so
 
     - name: Build the package
       run: python -m build
