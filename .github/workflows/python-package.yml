@@ -45,7 +45,7 @@ jobs:
       run: |
         RELEASE_NAME="${{ github.event.release.name }}"
         VERSION="${RELEASE_NAME:1}"
-        sed -i '0,/version = "1.0.0"/s//version = "${VERSION}"/' Cargo.toml
+        sed -i "0,/version = \"1.0.0\"/s//version = \"${VERSION}\"/" Cargo.toml
         cat Cargo.toml
       if: github.event_name == 'release' && github.event.action == 'published'
 
