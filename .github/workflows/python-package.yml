@@ -96,10 +96,7 @@ jobs:
       if: github.event_name == 'release' && github.event.action == 'published'
 
     - name: Update Mystiks version
-      run: |
-        RELEASE_NAME="${{ github.event.release.name }}"
-        VERSION="${RELEASE_NAME:1}"
-        sed -i "0,/version='1.0.0'/s//version='${VERSION}'/" setup.py
+      run: sed -i "0,/version='1.0.0'/s//version='${{ env.MYSTIKS_VERSION }}'/" setup.py
       if: github.event_name == 'release' && github.event.action == 'published'
 
     - name: Download Mystiks Core (cpython-310-x86_64-linux-gnu.so)
