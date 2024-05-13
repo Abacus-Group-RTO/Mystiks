@@ -47,7 +47,7 @@ jobs:
         VERSION="${RELEASE_NAME:1}"
         sed -i '0,/version = "1.0.0"/s//version = "${VERSION}"/' Cargo.toml
         cat Cargo.toml
-      if: github.event_name == 'release' && github.event.action == 'created'
+      if: github.event_name == 'release' && github.event.action == 'published'
 
     - name: Compile Mystiks Core
       working-directory: ./mystiks_core
@@ -63,7 +63,7 @@ jobs:
         VERSION="${RELEASE_NAME:1}"
         sed -i "0,/version='1.0.0'/s//version='${VERSION}'/" setup.py
         cat setup.py
-      if: github.event_name == 'release' && github.event.action == 'created'
+      if: github.event_name == 'release' && github.event.action == 'published'
 
     - name: Build the package
       run: python -m build
@@ -73,7 +73,7 @@ jobs:
     #     TWINE_USERNAME: __token__
     #     TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
     #   run: twine upload dist/*
-    #   if: github.event_name == 'release' && github.event.action == 'created'
+    #   if: github.event_name == 'release' && github.event.action == 'published'
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
