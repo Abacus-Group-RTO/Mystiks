@@ -27,7 +27,6 @@ jobs:
     - name: Change directory and set up Rust Toolchain
       run: |
         cd mystiks_core
-        echo "Working directory: $PWD"
         rustup toolchain install stable
         rustup default stable
         rustup update
@@ -41,6 +40,15 @@ jobs:
     - name: Lint with flake8
       run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
+    - name: Update Mystiks Core version
+      working-directory: ./mystiks_core
+      run: |
+        RELEASE_NAME="${{ github.event.release.name }}"
+        VERSION="${RELEASE_NAME:1}"
+        sed -i '0,/version = "1.0.0"/s//version = "${VERSION}"/' Cargo.toml
+        cat Cargo.toml
+      if: github.event_name == 'release' && github.event.action == 'created'
+
     - name: Compile Mystiks Core
       working-directory: ./mystiks_core
       run: |
@@ -49,15 +57,23 @@ jobs:
         maturin build --release --strip
         cp ./target/release/libmystiks_core.so ../mystiks/mystiks_core.cpython-${python_release}-x86_64-linux-gnu.so
 
+    - name: Update Mystiks version
+      run: |
+        RELEASE_NAME="${{ github.event.release.name }}"
+        VERSION="${RELEASE_NAME:1}"
+        sed -i "0,/version='1.0.0'/s//version='${VERSION}'/" setup.py
+        cat setup.py
+      if: github.event_name == 'release' && github.event.action == 'created'
+
     - name: Build the package
       run: python -m build
 
-    - name: Upload to PyPI
-      env:
-        TWINE_USERNAME: __token__
-        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      run: |
-        twine upload dist/*
+    # - name: Upload to PyPI
+    #   env:
+    #     TWINE_USERNAME: __token__
+    #     TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+    #   run: twine upload dist/*
+    #   if: github.event_name == 'release' && github.event.action == 'created'
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
