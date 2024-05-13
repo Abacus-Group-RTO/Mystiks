@@ -131,7 +131,7 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: artifacts-${{ matrix.python-version }}
+        name: distribution
         path: ./dist/*
         if-no-files-found: error
         retention-days: 90
