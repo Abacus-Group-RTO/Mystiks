@@ -65,6 +65,7 @@ jobs:
         rustup toolchain install stable
         rustup default stable
         rustup update
+        rustup target add x86_64-pc-windows-gnu
 
     - name: Set Mystiks version
       run: |
