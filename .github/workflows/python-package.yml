@@ -41,8 +41,8 @@ jobs:
 
     - name: Set up Windows toolchains
       run: |
-        apt update
-        apt install binutils-mingw-w64-x86-64 gcc-mingw-w64-x86-64 -y
+        sudo apt update
+        sudo apt install binutils-mingw-w64-x86-64 gcc-mingw-w64-x86-64 -y
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
