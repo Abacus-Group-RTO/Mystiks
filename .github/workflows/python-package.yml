@@ -34,7 +34,7 @@ jobs:
     needs: [ lint ]
     strategy:
       matrix:
-        python-version: ["3.10", "3.11", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
     - uses: actions/checkout@v3
@@ -161,6 +161,15 @@ jobs:
     - name: Move Mystiks Core (cpython-312-x86_64-linux-gnu.so)
       run: mv mystiks_core.cpython-312-x86_64-linux-gnu.so ./mystiks/mystiks_core.cpython-312-x86_64-linux-gnu.so
 
+    # Download and move Mystiks Core for Python 3.13 on Linux
+    - name: Download Mystiks Core (cpython-313-x86_64-linux-gnu.so)
+      uses: actions/download-artifact@v4
+      with:
+        name: mystiks_core.cpython-313-x86_64-linux-gnu.so
+
+    - name: Move Mystiks Core (cpython-313-x86_64-linux-gnu.so)
+      run: mv mystiks_core.cpython-313-x86_64-linux-gnu.so ./mystiks/mystiks_core.cpython-313-x86_64-linux-gnu.so
+
     # Download and move Mystiks Core for Python 3.10 on Windows
     - name: Download Mystiks Core (cp310-win_amd64.pyd)
       uses: actions/download-artifact@v4
@@ -187,6 +196,15 @@ jobs:
 
     - name: Move Mystiks Core (cp312-win_amd64.pyd)
       run: mv mystiks_core.cp312-win_amd64.pyd ./mystiks/mystiks_core.cp312-win_amd64.pyd
+
+    # Download and move Mystiks Core for Python 3.13 on Windows
+    - name: Download Mystiks Core (cp313-win_amd64.pyd)
+      uses: actions/download-artifact@v4
+      with:
+        name: mystiks_core.cp313-win_amd64.pyd
+
+    - name: Move Mystiks Core (cp313-win_amd64.pyd)
+      run: mv mystiks_core.cp313-win_amd64.pyd ./mystiks/mystiks_core.cp313-win_amd64.pyd
 
     - name: Build the package
       run: python -m build
