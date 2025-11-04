@@ -2,7 +2,7 @@
 from math import log, exp
 from json import dumps as to_json, loads as from_json
 from pathlib import Path
-from regex import compile as RegEx, finditer
+from re import compile as RegEx, finditer
 
 
 ACCEPTED_CHARACTERS = 'abcdefghijklmnopqrstuvwxyz '

@@ -2,7 +2,7 @@
 from math import log2
 from pathlib import Path
 from importlib import import_module
-from regex import finditer, match as match_regex
+from re import finditer, match as match_regex
 
 
 class Finding:

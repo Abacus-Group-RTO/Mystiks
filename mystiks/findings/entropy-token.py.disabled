@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from regex import compile as RegEx, search as search_regex
+from re import compile as RegEx, search as search_regex
 
 from . import SecretFinding, get_pronounceable_rating, \
     get_shannon_entropy, get_sequence_rating, get_character_counts, \
