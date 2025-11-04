@@ -12,15 +12,15 @@ setup(
         ]
     },
     install_requires=[
-        'regex==2023.8.8'
+        # 'regex==2023.8.8'
     ],
     include_package_data=True,
     author='Dennis Carlson',
-    author_email='dcarlson@gotham-security.com',
+    author_email='dcarlson@abacusgroupllc.com',
     description='A Python-based, Rust-core secret searching tool ',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
-    url='https://github.com/GoVanguard/Mystiks',
+    url='https://github.com/Abacus-Group-RTO/Mystiks',
     license='MIT',
     classifiers=[
         'License :: OSI Approved :: MIT License',
